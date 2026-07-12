@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── ITR Cabs brand palette ─────────────────────────────── */
+  --color-gold-50: #fffaeb;
+  --color-gold-100: #fdf0c7;
+  --color-gold-200: #fbdf8a;
+  --color-gold-300: #f9c94d;
+  --color-gold-400: #f7b524;
+  --color-gold-500: #f1940b;   /* primary golden yellow */
+  --color-gold-600: #d56e06;
+  --color-gold-700: #b14c09;
+  --color-gold-800: #8f3a0e;
+  --color-gold-900: #76300f;
+  --color-gold-950: #431703;
+
+  --color-ink: #0b0b0c;        /* jet black */
+  --color-ink-soft: #141416;
+  --color-ink-mute: #1d1d20;
+  --color-graphite: #2a2a2e;   /* dark grey accent */
+  --color-smoke: #6f6f76;
+  --color-cream: #faf9f5;      /* off white */
+  --color-sand: #f4f1e8;
+
+  --font-display: var(--font-sora);
+  --font-sans: var(--font-manrope);
+  --font-serif: var(--font-instrument-serif);
+
+  --shadow-glow: 0 0 24px -4px rgba(247, 181, 36, 0.55);
+  --shadow-glow-lg: 0 8px 48px -8px rgba(247, 181, 36, 0.5);
+  --shadow-card: 0 1px 2px rgba(11, 11, 12, 0.04), 0 8px 24px -12px rgba(11, 11, 12, 0.12);
+  --shadow-card-hover: 0 2px 4px rgba(11, 11, 12, 0.05), 0 24px 48px -16px rgba(11, 11, 12, 0.22);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-luxe: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-marquee: marquee 42s linear infinite;
+  --animate-marquee-reverse: marquee-reverse 48s linear infinite;
+  --animate-shimmer: shimmer 2.4s linear infinite;
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 3.2s ease-in-out infinite;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-50% - 0.75rem)); }
+  }
+  @keyframes marquee-reverse {
+    from { transform: translateX(calc(-50% - 0.75rem)); }
+    to { transform: translateX(0); }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.06); }
+  }
+}
+
+:root {
+  --header-h: 4.5rem;
+  color-scheme: light;
+}
+
+/* NOTE: no `scroll-behavior: smooth` here — it conflicts with Lenis,
+   which provides the smooth scrolling (and anchor handling) itself. */
+body {
+  @apply bg-cream text-ink font-sans antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--color-gold-400);
+  color: var(--color-ink);
+}
+
+/* Premium focus ring — visible, branded, never removed */
+:focus-visible {
+  outline: 2px solid var(--color-gold-500);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Thin luxe scrollbar */
+@media (pointer: fine) {
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-graphite) 60%, transparent);
+    border-radius: 999px;
+    border: 2px solid var(--color-cream);
+  }
+}
+
+/* ── Utility layers ─────────────────────────────────────── */
+@utility container-luxe {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: max(1.25rem, env(safe-area-inset-left));
+  max-width: 80rem;
+  @media (min-width: 640px) { padding-inline: 2rem; }
+  @media (min-width: 1024px) { padding-inline: 3rem; }
+}
+
+@utility text-gradient-gold {
+  background: linear-gradient(100deg, #f9c94d 0%, #f1940b 55%, #d56e06 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-gradient-gold {
+  background-image: linear-gradient(135deg, #fbd267 0%, #f7b524 42%, #ef8f0a 100%);
+}
+
+@utility glass {
+  background: color-mix(in srgb, white 65%, transparent);
+  backdrop-filter: blur(18px) saturate(1.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+}
+
+@utility glass-dark {
+  background: color-mix(in srgb, #0b0b0c 55%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+@utility mask-fade-x {
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
+/* Dotted map grid backdrop */
+@utility bg-dot-grid {
+  background-image: radial-gradient(color-mix(in srgb, var(--color-graphite) 14%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Hairline dividers that feel engineered */
+@utility hairline {
+  border-color: color-mix(in srgb, var(--color-ink) 8%, transparent);
+}
+
+/* Reduced motion: collapse all decorative animation */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

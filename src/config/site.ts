@@ -1,0 +1,48 @@
+export const siteConfig = {
+  name: "ITR Cabs",
+  legalName: "ITR Cabs — ITR Groups",
+  tagline: "Kerala, driven beautifully.",
+  description:
+    "ITR Cabs is Kerala's premium taxi and cab booking service based in Kakkanad, Ernakulam. Airport transfers, corporate cabs, employee transportation, tempo traveller and Urbania rentals, and luxury outstation trips to Munnar, Alleppey, Wayanad and beyond — GPS-tracked fleet, verified chauffeurs, transparent pricing.",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://itrcabs.com",
+  phone: "+918089005500",
+  phoneDisplay: "8089 00 55 00",
+  whatsapp: "918089005500",
+  email: "itrgrp@gmail.com",
+  address: {
+    street: "Infopark Kakkanad Road",
+    locality: "Kakkanad",
+    region: "Ernakulam, Kerala",
+    postalCode: "682030",
+    country: "IN",
+  },
+  geo: { lat: 10.0158, lng: 76.3419 },
+  hours: "Open 24 hours, 7 days a week",
+  founded: "1995",
+  googleRating: { value: 4.9, count: 1280 },
+  social: {
+    instagram: "https://instagram.com/itrcabs",
+    facebook: "https://facebook.com/itrcabs",
+    whatsappLink: "https://wa.me/918089005500?text=Hi%20ITR%20Cabs%2C%20I%27d%20like%20to%20book%20a%20cab.",
+  },
+  bookingAmount: 199,
+  keywords: [
+    "Kochi taxi",
+    "Ernakulam taxi",
+    "cab booking Kerala",
+    "airport taxi Kochi",
+    "Munnar taxi",
+    "corporate cab Kochi",
+    "employee transportation Kerala",
+    "tempo traveller Kerala",
+    "Urbania rental Kerala",
+    "airport pickup Kochi",
+    "taxi near me",
+    "travel agency Kochi",
+    "cab service Kakkanad",
+    "taxi service Ernakulam",
+    "luxury cab Kerala",
+  ],
+} as const;
+
+export type SiteConfig = typeof siteConfig;
