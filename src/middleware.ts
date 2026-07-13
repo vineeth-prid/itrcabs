@@ -16,10 +16,19 @@ export async function middleware(req: NextRequest) {
       await jwtVerify(token, secret);
       return NextResponse.next();
     } catch {
-      const login = req.nextUrl.clone();
-      login.pathname = "/admin/login";
-      login.searchParams.set("next", pathname);
-      return NextResponse.redirect(login);
+      // Build the redirect from the proxy's forwarded headers — req.nextUrl
+      // points at the internal host (localhost:3000) behind a reverse proxy,
+      // and Next.js middleware rejects relative Location headers.
+      const proto =
+        req.headers.get("x-forwarded-proto")?.split(",")[0].trim() ??
+        req.nextUrl.protocol.replace(":", "");
+      const host =
+        req.headers.get("x-forwarded-host")?.split(",")[0].trim() ??
+        req.headers.get("host") ??
+        req.nextUrl.host;
+      return NextResponse.redirect(
+        `${proto}://${host}/admin/login?next=${encodeURIComponent(pathname)}`
+      );
     }
   }
 

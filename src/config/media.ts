@@ -1,12 +1,12 @@
 /**
  * Real photography for the site — every entry is optional and hot-swappable.
  *
- * Defaults hotlink Wikimedia Commons (hotlinking is permitted and their CDN
- * is stable). To use your own photography or videos, drop files into
- * `public/media/...` and change the URLs here — nothing else to touch.
- * Wherever a photo is missing or fails to load, the site gracefully falls
- * back to the signature vector illustrations, so a broken URL can never
- * break the design.
+ * Scene backdrops hotlink Unsplash (hotlinking via images.unsplash.com is
+ * permitted and CDN-backed); vehicle photos hotlink Wikimedia Commons. To use
+ * your own photography or videos, drop files into `public/media/...` and
+ * change the URLs here — nothing else to touch. Wherever a photo is missing
+ * or fails to load, the site gracefully falls back to the signature vector
+ * illustrations, so a broken URL can never break the design.
  */
 
 export interface SceneMedia {
@@ -20,22 +20,22 @@ export interface SceneMedia {
 export const sceneMedia: Record<string, SceneMedia | undefined> = {
   kochi: {
     image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Kochi_Skyline.jpg/1920px-Kochi_Skyline.jpg",
-    alt: "Kochi city skyline across the Marine Drive waterfront",
+      "https://images.unsplash.com/photo-1590123732197-e7079d2ceb89?q=80&w=1920&auto=format&fit=crop",
+    alt: "Chinese fishing nets silhouetted against a pastel sunset at Fort Kochi",
   },
   backwaters: {
     image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Houseboat_on_Alleppey_backwaters_%28Kerala%2C_India_2023%29_%2852704577484%29.jpg/1920px-Houseboat_on_Alleppey_backwaters_%28Kerala%2C_India_2023%29_%2852704577484%29.jpg",
-    alt: "A traditional houseboat drifting on the Alleppey backwaters",
+      "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=1920&auto=format&fit=crop",
+    alt: "A traditional houseboat drifting through palm-lined Alleppey backwaters",
   },
   munnar: {
     image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/1_aerial_view_of_Munnar_Tea_Gardens_Kerala_India_2016.jpg/1920px-1_aerial_view_of_Munnar_Tea_Gardens_Kerala_India_2016.jpg",
-    alt: "Aerial view of the rolling tea gardens of Munnar",
+      "https://images.unsplash.com/photo-1719831738921-972e0ec76337?q=80&w=1920&auto=format&fit=crop",
+    alt: "Mist rolling over the peaks above Munnar's rolling tea gardens",
   },
   athirappilly: {
     image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Athirappilly_Falls_2025_June.jpg/1920px-Athirappilly_Falls_2025_June.jpg",
+      "https://images.unsplash.com/photo-1713717857192-080dbbcba744?q=80&w=1920&auto=format&fit=crop",
     // Live footage of the falls (1.4 MB looping webm; the image above is the poster)
     video:
       "https://upload.wikimedia.org/wikipedia/commons/transcoded/9/97/Athirappilly_Waterfalls_video_03.webm/Athirappilly_Waterfalls_video_03.webm.720p.vp9.webm",
@@ -43,13 +43,13 @@ export const sceneMedia: Record<string, SceneMedia | undefined> = {
   },
   beach: {
     image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Kovalam_beach_trivandrum_kerala.jpg/1920px-Kovalam_beach_trivandrum_kerala.jpg",
-    alt: "Kovalam beach and lighthouse at golden hour",
+      "https://images.unsplash.com/photo-1621338316942-d447981536a5?q=80&w=1920&auto=format&fit=crop",
+    alt: "Kovalam lighthouse rising over palms and surf on the Kerala coast",
   },
   hairpins: {
     image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Wayanad_hairpin_curves.jpg/1920px-Wayanad_hairpin_curves.jpg",
-    alt: "Hairpin bends climbing the Wayanad ghats",
+      "https://images.unsplash.com/photo-1580289869586-3baf90956ccc?q=80&w=1920&h=1080&auto=format&fit=crop",
+    alt: "A misty forest road curving through the Western Ghats",
   },
   /* The arrival finale stays illustrated — lamplit gate, stars and fireflies. */
   arrival: undefined,
@@ -62,47 +62,38 @@ export interface VehiclePhoto {
 
 export const vehiclePhotos: Record<string, VehiclePhoto | undefined> = {
   "premium-sedan": {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Suzuki_Dzire_1.2_GL%2B_2024.jpg/1280px-Suzuki_Dzire_1.2_GL%2B_2024.jpg",
-    alt: "Maruti Suzuki Dzire premium sedan",
+    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Suzuki_Dzire_II_1.2_GLX_Hybrid_Arctic_White_Pearl.jpg/1280px-Suzuki_Dzire_II_1.2_GLX_Hybrid_Arctic_White_Pearl.jpg",
+    alt: "Maruti Suzuki Dzire premium sedan in pearl white",
   },
   "compact-suv": {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Maruti_Suzuki_Brezza_-_front.jpg/1280px-Maruti_Suzuki_Brezza_-_front.jpg",
-    alt: "Maruti Suzuki Brezza compact SUV",
+    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/2022_Maruti_Suzuki_Brezza_ZXi%2B_%28India%29_front_view_04.png/1280px-2022_Maruti_Suzuki_Brezza_ZXi%2B_%28India%29_front_view_04.png",
+    alt: "Maruti Suzuki Brezza compact SUV by the sea",
   },
   "classic-suv": {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/2022_Hyundai_Creta_1.6_Plus.jpg/1280px-2022_Hyundai_Creta_1.6_Plus.jpg",
-    alt: "Hyundai Creta SUV",
+    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/2024_Hyundai_Creta_1.5_MPi_SX%28O%29_%28India%29_front_view.png/1280px-2024_Hyundai_Creta_1.5_MPi_SX%28O%29_%28India%29_front_view.png",
+    alt: "Hyundai Creta SUV in white",
   },
   "luxury-suv": {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Toyota_Fortuner_4x4_Legender_%28LTD%29_2-Tone_White_Pearl-Black.jpg/1280px-Toyota_Fortuner_4x4_Legender_%28LTD%29_2-Tone_White_Pearl-Black.jpg",
-    alt: "Toyota Fortuner Legender luxury SUV",
+    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Toyota_Fortuner_GUN166_Legender_2.8_Q_4x2_Gray_Metallic_01.jpg/1280px-Toyota_Fortuner_GUN166_Legender_2.8_Q_4x2_Gray_Metallic_01.jpg",
+    alt: "Toyota Fortuner Legender luxury SUV in metallic grey",
   },
   ertiga: {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/2022_Maruti_Suzuki_Ertiga_LXi.jpg/1280px-2022_Maruti_Suzuki_Ertiga_LXi.jpg",
-    alt: "Maruti Suzuki Ertiga MPV",
+    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/2022_Suzuki_Ertiga_GX_Hybrid.jpg/1280px-2022_Suzuki_Ertiga_GX_Hybrid.jpg",
+    alt: "Maruti Suzuki Ertiga MPV in white",
   },
   carens: {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Kia_Carens_2024_Model.jpg/1280px-Kia_Carens_2024_Model.jpg",
-    alt: "Kia Carens MPV",
+    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Kia_Carens_2024_Model_2.jpg/1280px-Kia_Carens_2024_Model_2.jpg",
+    alt: "Kia Carens MPV in a showroom",
   },
   "innova-crysta": {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Toyota_Innova_Crysta_2.4_Z_side.jpg/1280px-Toyota_Innova_Crysta_2.4_Z_side.jpg",
-    alt: "Toyota Innova Crysta",
+    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Toyota_Innova_Crysta_2.4_Z_front_right.jpg/1280px-Toyota_Innova_Crysta_2.4_Z_front_right.jpg",
+    alt: "Toyota Innova Crysta in white",
   },
-  "tempo-traveller-12": {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Force_Traveller%2C_Leh-Manali_Highway.jpg/1280px-Force_Traveller%2C_Leh-Manali_Highway.jpg",
-    alt: "Force Traveller tempo traveller",
-  },
-  "tempo-traveller-17": {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Force_Traveller%2C_Leh-Manali_Highway.jpg/1280px-Force_Traveller%2C_Leh-Manali_Highway.jpg",
-    alt: "Force Traveller tempo traveller",
-  },
-  "tempo-traveller-26": {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Force_Motors_-_Traveller_26_-_Agra_2014-05-14_4222.JPG/1280px-Force_Motors_-_Traveller_26_-_Agra_2014-05-14_4222.JPG",
-    alt: "Force Traveller 26-seat coach",
-  },
-  /* No quality Urbania photography on Commons yet — the signature illustration
-     is shown until you add your own photo of the fleet here. */
+  /* No classy tempo-traveller or Urbania photography on Commons yet — the
+     signature illustrations are shown until you add your own fleet photos. */
+  "tempo-traveller-12": undefined,
+  "tempo-traveller-17": undefined,
+  "tempo-traveller-26": undefined,
   "urbania-14": undefined,
   "urbania-18": undefined,
 };

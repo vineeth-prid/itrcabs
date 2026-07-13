@@ -27,7 +27,8 @@ export function LoginForm() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Login failed");
-      router.push(params.get("next") ?? "/admin");
+      const next = params.get("next");
+      router.push(next?.startsWith("/") && !next.startsWith("//") ? next : "/admin");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
