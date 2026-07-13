@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/admin/login-form";
 import { LogoMark } from "@/components/brand/logo";
+import { hasDatabase } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Admin Login",
@@ -22,7 +23,7 @@ export default function AdminLoginPage() {
           <p className="mt-2 text-sm text-cream/60">Operations dashboard — authorised staff only</p>
         </div>
         <Suspense>
-          <LoginForm />
+          <LoginForm demoMode={!hasDatabase} />
         </Suspense>
       </div>
     </main>

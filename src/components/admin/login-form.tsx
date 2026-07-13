@@ -7,7 +7,7 @@ import { Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 
-export function LoginForm() {
+export function LoginForm({ demoMode }: { demoMode: boolean }) {
   const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState("");
@@ -75,9 +75,11 @@ export function LoginForm() {
         {busy ? <Loader2 className="animate-spin" aria-hidden /> : <Lock aria-hidden />}
         Sign in
       </Button>
-      <p className="mt-5 text-center text-xs text-cream/40">
-        Demo access: admin@itrcabs.com · itrcabs@2026
-      </p>
+      {demoMode && (
+        <p className="mt-5 text-center text-xs text-cream/40">
+          Demo access: admin@itrcabs.com · itrcabs@2026
+        </p>
+      )}
     </motion.form>
   );
 }
