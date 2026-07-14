@@ -10,7 +10,9 @@ async function main() {
   const passwordHash = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD ?? "itrcabs@2026", 12);
   await prisma.adminUser.upsert({
     where: { email: "admin@itrcabs.com" },
-    update: {},
+    // Always refresh the hash so re-seeding with a new SEED_ADMIN_PASSWORD
+    // actually resets the password (update: {} froze the first-ever hash).
+    update: { passwordHash },
     create: {
       email: "admin@itrcabs.com",
       name: "ITR Admin",
