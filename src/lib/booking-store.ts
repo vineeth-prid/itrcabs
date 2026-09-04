@@ -173,14 +173,101 @@ export async function listBookings(): Promise<BookingRecord[]> {
   return [...memory.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export async function updateBookingStatus(
-  id: string,
-  status: BookingRecord["status"]
-): Promise<void> {
+export interface BookingPatch {
+  status?: BookingRecord["status"];
+  tripType?: BookingRecord["tripType"];
+  days?: number;
+  passengers?: number;
+  vehicleSlug?: string;
+  pickup?: string;
+  destination?: string;
+  pickupDate?: string;
+  pickupTime?: string;
+  name?: string;
+  phone?: string;
+  email?: string;
+  estimateTotal?: number;
+  bookingAmount?: number;
+  includedKm?: number;
+  extraKmRate?: number;
+}
+
+/** Admin edit — any subset of booking fields, including fare and contact details. */
+export async function updateBooking(id: string, patch: BookingPatch): Promise<BookingRecord | null> {
+  const { vehicleSlug, pickupDate, ...rest } = patch;
+
   if (hasDatabase) {
-    await prisma.booking.update({ where: { id }, data: { status } });
-    return;
+    const current = await prisma.booking.findUnique({ where: { id } });
+    if (!current) return null;
+
+    const data: Record<string, unknown> = { ...rest };
+    if (pickupDate) data.pickupDate = new Date(pickupDate);
+    if (vehicleSlug) {
+      const vehicle = await prisma.vehicle.findUnique({ where: { slug: vehicleSlug } });
+      if (!vehicle) throw new Error("Unknown vehicle");
+      data.vehicleId = vehicle.id;
+    }
+    /* Contact edits follow through to the customer record so the customers view
+       and any later booking on that phone stay consistent. Upserting by the new
+       phone also avoids a unique-constraint clash when the phone changes. */
+    if (patch.name !== undefined || patch.phone !== undefined || patch.email !== undefined) {
+      const customer = await prisma.customer.upsert({
+        where: { phone: patch.phone ?? current.phone },
+        update: { name: patch.name ?? current.name, email: patch.email ?? current.email ?? undefined },
+        create: {
+          phone: patch.phone ?? current.phone,
+          name: patch.name ?? current.name,
+          email: patch.email ?? current.email ?? undefined,
+        },
+      });
+      data.customerId = customer.id;
+    }
+    await prisma.booking.update({ where: { id }, data });
+    return getBooking(id);
   }
+
   const b = memory.get(id);
-  if (b) b.status = status;
+  if (!b) return null;
+  for (const [k, v] of Object.entries(rest)) if (v !== undefined) (b as unknown as Record<string, unknown>)[k] = v;
+  if (pickupDate) b.pickupDate = pickupDate;
+  if (vehicleSlug) {
+    const spec = getVehicle(vehicleSlug);
+    if (!spec) throw new Error("Unknown vehicle");
+    b.vehicleSlug = vehicleSlug;
+    b.vehicleName = spec.name;
+  }
+  return b;
+}
+
+/**
+ * Admin edit of a customer's details. Bookings carry a denormalised copy of the
+ * contact, so every booking on that phone moves with the customer record.
+ */
+export async function updateCustomer(
+  phone: string,
+  patch: { name?: string; phone?: string; email?: string }
+): Promise<number> {
+  const changes = {
+    ...(patch.name !== undefined && { name: patch.name }),
+    ...(patch.phone !== undefined && { phone: patch.phone }),
+    ...(patch.email !== undefined && { email: patch.email || null }),
+  };
+  if (Object.keys(changes).length === 0) return 0;
+
+  if (hasDatabase) {
+    const existing = await prisma.customer.findUnique({ where: { phone } });
+    if (existing) await prisma.customer.update({ where: { phone }, data: changes });
+    const { count } = await prisma.booking.updateMany({ where: { phone }, data: changes });
+    return count;
+  }
+
+  let count = 0;
+  for (const b of memory.values()) {
+    if (b.phone !== phone) continue;
+    if (patch.name !== undefined) b.name = patch.name;
+    if (patch.email !== undefined) b.email = patch.email || undefined;
+    if (patch.phone !== undefined) b.phone = patch.phone;
+    count += 1;
+  }
+  return count;
 }

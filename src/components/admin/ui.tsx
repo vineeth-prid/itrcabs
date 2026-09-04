@@ -62,3 +62,27 @@ export function StatusBadge({ status }: { status: string }) {
     </span>
   );
 }
+
+/** Shared input skin for the dark admin surfaces. */
+export const darkField =
+  "border-white/10 bg-white/5 text-white placeholder:text-white/25 hover:border-white/20";
+
+export function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-[13px] font-semibold tracking-wide text-cream/50">
+        {label}
+      </label>
+      {children}
+      {hint && <p className="mt-1 text-[11px] text-cream/35">{hint}</p>}
+    </div>
+  );
+}

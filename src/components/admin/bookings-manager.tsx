@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, RefreshCw, Search } from "lucide-react";
+import { Download, Pencil, Plus, RefreshCw, Search } from "lucide-react";
 import type { BookingRecord } from "@/lib/booking-store";
 import { formatINR, cn } from "@/lib/utils";
 import { PageTitle, Panel, StatusBadge } from "@/components/admin/ui";
 import { Input } from "@/components/ui/input";
+import { BookingDialog } from "@/components/admin/booking-dialog";
 
 const STATUSES = ["ALL", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"] as const;
 
@@ -44,6 +45,8 @@ export function BookingsManager() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<(typeof STATUSES)[number]>("ALL");
   const [query, setQuery] = useState("");
+  /* null = closed, undefined = create, a record = edit */
+  const [editing, setEditing] = useState<BookingRecord | undefined | null>(null);
 
   const { data: bookings = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ["admin-bookings"],
@@ -78,6 +81,12 @@ export function BookingsManager() {
     <>
       <PageTitle title="Bookings" sub={`${bookings.length} total · ${filtered.length} shown`}>
         <div className="flex gap-2">
+          <button
+            onClick={() => setEditing(undefined)}
+            className="flex items-center gap-2 rounded-full border border-gold-500/40 px-5 py-2.5 text-sm font-bold text-gold-300 transition-colors hover:bg-gold-500/10"
+          >
+            <Plus className="size-4" aria-hidden /> New booking
+          </button>
           <button
             onClick={() => refetch()}
             className="flex items-center gap-2 rounded-full border border-white/10 px-5 py-2.5 text-sm font-bold text-cream/70 transition-colors hover:border-gold-500/40 hover:text-gold-300"
@@ -160,17 +169,26 @@ export function BookingsManager() {
                   <td className="px-5 py-4 font-semibold text-white">{formatINR(b.estimateTotal)}</td>
                   <td className="px-5 py-4"><StatusBadge status={b.status} /></td>
                   <td className="px-5 py-4">
-                    <select
-                      value={b.status}
-                      onChange={(e) => mutation.mutate({ id: b.id, status: e.target.value as BookingRecord["status"] })}
-                      disabled={mutation.isPending}
-                      aria-label={`Change status of ${b.bookingCode}`}
-                      className="rounded-lg border border-white/10 bg-ink px-3 py-1.5 text-xs font-bold text-cream/80 focus:border-gold-500 focus:outline-none"
-                    >
-                      {["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"].map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={b.status}
+                        onChange={(e) => mutation.mutate({ id: b.id, status: e.target.value as BookingRecord["status"] })}
+                        disabled={mutation.isPending}
+                        aria-label={`Change status of ${b.bookingCode}`}
+                        className="rounded-lg border border-white/10 bg-ink px-3 py-1.5 text-xs font-bold text-cream/80 focus:border-gold-500 focus:outline-none"
+                      >
+                        {["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"].map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setEditing(b)}
+                        aria-label={`Edit ${b.bookingCode}`}
+                        className="rounded-lg border border-white/10 p-2 text-cream/60 transition-colors hover:border-gold-500/40 hover:text-gold-300"
+                      >
+                        <Pencil className="size-3.5" aria-hidden />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -178,6 +196,15 @@ export function BookingsManager() {
           </table>
         )}
       </Panel>
+
+      {editing !== null && (
+        <BookingDialog
+          key={editing?.id ?? "new"}
+          booking={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["admin-bookings"] })}
+        />
+      )}
     </>
   );
 }
