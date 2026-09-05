@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/layout/navbar";
+import { SmoothScroll } from "@/components/motion/smooth-scroll";
 import { Footer } from "@/components/layout/footer";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -10,6 +11,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       >
         Skip to content
       </a>
+      <SmoothScroll />
       <Navbar />
       <main id="main">{children}</main>
       <Footer />

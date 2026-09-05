@@ -3,7 +3,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { getSession } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: { default: "Dashboard", template: "%s · ITR Admin" },
+  title: { default: "ITR Admin", template: "%s · ITR Admin" },
   robots: { index: false, follow: false },
 };
 

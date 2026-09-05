@@ -70,7 +70,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${sora.variable} ${manrope.variable} ${instrumentSerif.variable}`}>
-      <body>
+      {/* Browser extensions inject attributes into body before React hydrates;
+          without this that shows up in production as a hydration error. */}
+      <body suppressHydrationWarning>
         <JsonLd schema={organizationSchema()} />
         <JsonLd schema={localBusinessSchema()} />
         <Providers>{children}</Providers>

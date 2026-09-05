@@ -65,6 +65,9 @@ model Vehicle {
   perDayPrice   Int
   extraKmRate   Int
   driverBata    Int             @default(400)
+  driverBasePrice   Int         @default(0)
+  driverPerDayPrice Int         @default(0)
+  driverExtraKmRate Int         @default(0)
   illustration  String          @default("sedan")
   features      String[]
   examples      String          @default("")
@@ -158,6 +161,11 @@ model Booking {
   driver        Driver?       @relation(fields: [driverId], references: [id])
   driverId      String?
   payment       Payment?
+  actualKm      Int?
+  driverAmount  Int?
+  collectedAmount Int?
+  driverSettled Boolean       @default(false)
+  settledAt     DateTime?
   phoneVerified Boolean       @default(false)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

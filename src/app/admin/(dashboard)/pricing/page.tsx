@@ -10,7 +10,7 @@ export default function AdminPricingPage() {
     <>
       <PageTitle
         title="Pricing engine"
-        sub="Global rules applied to every quote — per-vehicle rates live in Fleet"
+        sub="What the customer pays, what the driver is paid, and the margin between them — editable in Fleet"
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -21,23 +21,31 @@ export default function AdminPricingPage() {
       </div>
 
       <Panel className="mt-6 overflow-x-auto p-0">
-        <table className="w-full min-w-[760px] text-left text-sm">
+        <table className="w-full min-w-[900px] text-left text-sm">
           <thead>
             <tr className="border-b border-white/8 text-[11px] uppercase tracking-wider text-cream/40">
-              {["Vehicle", "Category", "One-day base", "Multi-day /day", "Extra KM", "Driver bata"].map((h) => (
-                <th key={h} className="px-5 py-4 font-semibold">{h}</th>
+              {["Vehicle", "One-day base", "Driver gets", "Margin", "Multi-day /day", "Driver gets", "Extra KM", "Driver gets", "Bata"].map((h, i) => (
+                <th key={h + i} className="px-5 py-4 font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {fleet.map((v) => (
               <tr key={v.slug} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
-                <td className="px-5 py-3.5 font-semibold text-white">{v.name}</td>
-                <td className="px-5 py-3.5 text-cream/60">{v.categoryLabel}</td>
-                <td className="px-5 py-3.5 font-bold text-gold-300">{formatINR(v.basePrice)}</td>
-                <td className="px-5 py-3.5 text-cream/80">{formatINR(v.perDayPrice)}</td>
-                <td className="px-5 py-3.5 text-cream/80">₹{v.extraKmRate}/km</td>
-                <td className="px-5 py-3.5 text-cream/80">{formatINR(v.driverBata)}/day</td>
+                <td className="px-5 py-3.5">
+                  <p className="font-semibold text-white">{v.name}</p>
+                  <p className="text-xs text-cream/40">{v.categoryLabel}</p>
+                </td>
+                <td className="px-5 py-3.5 font-bold tabular-nums text-gold-300">{formatINR(v.basePrice)}</td>
+                <td className="px-5 py-3.5 tabular-nums text-cream/60">{formatINR(v.driverBasePrice)}</td>
+                <td className="px-5 py-3.5 font-semibold tabular-nums text-white">
+                  {formatINR(v.basePrice - v.driverBasePrice)}
+                </td>
+                <td className="px-5 py-3.5 tabular-nums text-cream/80">{formatINR(v.perDayPrice)}</td>
+                <td className="px-5 py-3.5 tabular-nums text-cream/60">{formatINR(v.driverPerDayPrice)}</td>
+                <td className="px-5 py-3.5 tabular-nums text-cream/80">₹{v.extraKmRate}/km</td>
+                <td className="px-5 py-3.5 tabular-nums text-cream/60">₹{v.driverExtraKmRate}/km</td>
+                <td className="px-5 py-3.5 tabular-nums text-cream/80">{formatINR(v.driverBata)}</td>
               </tr>
             ))}
           </tbody>

@@ -43,7 +43,16 @@ const postSchema = z.object({
   status: status.default("PENDING"),
 });
 
-const patchSchema = z.object(fields).partial().extend({ id: z.string().min(1) });
+/* Trip close-out fields — set after the ride, so they are patch-only.
+   null clears a value back to "not recorded yet". */
+const nullableMoney = money.nullable();
+const patchSchema = z.object(fields).partial().extend({
+  id: z.string().min(1),
+  actualKm: z.number().int().min(0).max(20000).nullable().optional(),
+  driverAmount: nullableMoney.optional(),
+  collectedAmount: nullableMoney.optional(),
+  driverSettled: z.boolean().optional(),
+});
 
 function bad(e: z.ZodError) {
   const issue = e.issues[0];
@@ -71,10 +80,11 @@ export async function POST(req: Request) {
   });
 
   // createBooking always starts PENDING at the default deposit — apply admin overrides after.
-  if (newStatus !== "PENDING" || bookingAmount !== undefined) {
-    await updateBooking(booking.id, { status: newStatus, bookingAmount });
-  }
-  return NextResponse.json({ ok: true, booking });
+  const final =
+    newStatus !== "PENDING" || bookingAmount !== undefined
+      ? await updateBooking(booking.id, { status: newStatus, bookingAmount })
+      : booking;
+  return NextResponse.json({ ok: true, booking: final ?? booking });
 }
 
 export async function PATCH(req: Request) {

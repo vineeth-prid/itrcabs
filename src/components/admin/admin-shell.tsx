@@ -5,20 +5,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, CalendarCheck2, CarFront, IndianRupee, Users2,
-  CreditCard, PanelsTopLeft, BarChart3, Settings, LogOut, Menu, X,
+  CreditCard, PanelsTopLeft, Settings, LogOut, Menu, X,
 } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 
 const nav = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/bookings", label: "Bookings", icon: CalendarCheck2 },
   { href: "/admin/fleet", label: "Fleet", icon: CarFront },
   { href: "/admin/pricing", label: "Pricing", icon: IndianRupee },
   { href: "/admin/customers", label: "Customers", icon: Users2 },
-  { href: "/admin/payments", label: "Payments", icon: CreditCard },
+  { href: "/admin/payments", label: "Settlements", icon: CreditCard },
   { href: "/admin/cms", label: "CMS", icon: PanelsTopLeft },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

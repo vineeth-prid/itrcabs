@@ -18,6 +18,9 @@ interface AdminVehicle {
   basePrice: number;
   perDayPrice: number;
   extraKmRate: number;
+  driverBasePrice: number;
+  driverPerDayPrice: number;
+  driverExtraKmRate: number;
   available: boolean;
   illustration: Illustration;
   examples: string;
@@ -162,7 +165,9 @@ export function FleetManager() {
         <Panel><p className="py-16 text-center text-sm text-cream/40">Loading fleet…</p></Panel>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {data?.vehicles.map((v) => (
+          {data?.vehicles.map((v) => {
+            const margin = v.basePrice - v.driverBasePrice;
+            return (
             <Panel key={v.slug} className={cn("transition-opacity", !v.available && "opacity-55")}>
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -213,11 +218,42 @@ export function FleetManager() {
                   onSave={async (n) => patch.mutateAsync({ slug: v.slug, extraKmRate: n })}
                 />
               </div>
+              <p className="mb-2 mt-4 text-[10px] font-bold uppercase tracking-wider text-cream/35">
+                Driver rate card — what we pay
+              </p>
+              <div className="grid grid-cols-3 gap-2.5">
+                <PriceField
+                  label="Base ₹/day"
+                  value={v.driverBasePrice}
+                  min={0}
+                  max={100000}
+                  onSave={async (n) => patch.mutateAsync({ slug: v.slug, driverBasePrice: n })}
+                />
+                <PriceField
+                  label="Multi ₹/day"
+                  value={v.driverPerDayPrice}
+                  min={0}
+                  max={100000}
+                  onSave={async (n) => patch.mutateAsync({ slug: v.slug, driverPerDayPrice: n })}
+                />
+                <PriceField
+                  label="₹/extra km"
+                  value={v.driverExtraKmRate}
+                  min={0}
+                  max={200}
+                  onSave={async (n) => patch.mutateAsync({ slug: v.slug, driverExtraKmRate: n })}
+                />
+              </div>
               <p className="mt-3 text-[11px] text-cream/35">
-                Live price shown to customers: <strong className="text-gold-300">{formatINR(v.basePrice)}</strong> one-day base
+                One-day margin:{" "}
+                <strong className={cn(margin < 0 ? "text-red-300" : "text-gold-300")}>
+                  {formatINR(margin)}
+                </strong>{" "}
+                per trip · <strong className="text-cream/60">₹{v.extraKmRate - v.driverExtraKmRate}</strong> per extra km
               </p>
             </Panel>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

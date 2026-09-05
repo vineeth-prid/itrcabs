@@ -20,6 +20,9 @@ export interface FleetOverride {
   perDayPrice?: number;
   extraKmRate?: number;
   driverBata?: number;
+  driverBasePrice?: number;
+  driverPerDayPrice?: number;
+  driverExtraKmRate?: number;
   available?: boolean;
 }
 
@@ -39,6 +42,9 @@ export async function getEffectiveFleet(): Promise<EffectiveVehicle[]> {
         perDayPrice: r?.perDayPrice ?? v.perDayPrice,
         extraKmRate: r?.extraKmRate ?? v.extraKmRate,
         driverBata: r?.driverBata ?? v.driverBata,
+        driverBasePrice: r?.driverBasePrice || v.driverBasePrice,
+        driverPerDayPrice: r?.driverPerDayPrice || v.driverPerDayPrice,
+        driverExtraKmRate: r?.driverExtraKmRate || v.driverExtraKmRate,
         available: r?.available ?? true,
       };
     });
@@ -51,6 +57,9 @@ export async function getEffectiveFleet(): Promise<EffectiveVehicle[]> {
       perDayPrice: o?.perDayPrice ?? v.perDayPrice,
       extraKmRate: o?.extraKmRate ?? v.extraKmRate,
       driverBata: o?.driverBata ?? v.driverBata,
+      driverBasePrice: o?.driverBasePrice ?? v.driverBasePrice,
+      driverPerDayPrice: o?.driverPerDayPrice ?? v.driverPerDayPrice,
+      driverExtraKmRate: o?.driverExtraKmRate ?? v.driverExtraKmRate,
       available: o?.available ?? true,
     };
   });

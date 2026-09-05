@@ -86,3 +86,37 @@ export function Field({
     </div>
   );
 }
+
+/**
+ * Horizontal magnitude bars — one series, one hue, value labelled directly.
+ * Single series needs no legend: the panel heading names what is being measured.
+ */
+export function BarList({
+  rows,
+  empty = "Nothing in this range yet.",
+}: {
+  rows: { key: string; label: string; value: string; fraction: number; title?: string }[];
+  empty?: string;
+}) {
+  if (rows.length === 0) {
+    return <p className="py-10 text-center text-sm text-cream/40">{empty}</p>;
+  }
+  return (
+    <ul className="space-y-4">
+      {rows.map((r) => (
+        <li key={r.key} title={r.title}>
+          <div className="mb-1.5 flex justify-between gap-4 text-sm">
+            <span className="truncate font-semibold text-cream/80">{r.label}</span>
+            <span className="shrink-0 tabular-nums text-cream/50">{r.value}</span>
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-white/8">
+            <div
+              className="h-full rounded-full bg-gradient-gold"
+              style={{ width: `${Math.max(2, r.fraction * 100)}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}

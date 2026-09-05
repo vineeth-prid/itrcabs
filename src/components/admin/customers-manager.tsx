@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, X } from "lucide-react";
 import type { BookingRecord } from "@/lib/booking-store";
-import { formatINR } from "@/lib/utils";
+import { formatINR, formatDate } from "@/lib/utils";
 import { PageTitle, Panel, StatCard, Field, darkField } from "@/components/admin/ui";
 import { Input } from "@/components/ui/input";
+import { useAdminBookings } from "@/components/admin/use-admin-bookings";
 
 interface Customer {
   name: string;
@@ -27,7 +28,7 @@ function rollUp(bookings: BookingRecord[]): Customer[] {
     entry.name = b.createdAt >= entry.last ? b.name : entry.name;
     entry.email = b.email ?? entry.email;
     entry.trips += 1;
-    entry.value += b.estimateTotal;
+    entry.value += b.finance.customerTotal;
     if (b.createdAt > entry.last) entry.last = b.createdAt;
     byPhone.set(b.phone, entry);
   }
@@ -168,14 +169,7 @@ export function CustomersManager() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Customer | null>(null);
 
-  const { data: bookings = [], isLoading } = useQuery<BookingRecord[]>({
-    queryKey: ["admin-bookings"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/bookings");
-      if (!res.ok) throw new Error("Failed to load customers");
-      return (await res.json()).bookings;
-    },
-  });
+  const { data: bookings = [], isLoading } = useAdminBookings();
 
   const customers = rollUp(bookings);
 
@@ -222,7 +216,7 @@ export function CustomersManager() {
                   <td className="px-5 py-3.5 font-bold text-gold-300">{c.trips}</td>
                   <td className="px-5 py-3.5 text-cream/80">{formatINR(c.value)}</td>
                   <td className="px-5 py-3.5 text-cream/60">
-                    {new Date(c.last).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+                    {formatDate(c.last)}
                   </td>
                   <td className="px-5 py-3.5">
                     <button

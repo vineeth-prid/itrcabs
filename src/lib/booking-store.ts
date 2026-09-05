@@ -1,5 +1,7 @@
 import { prisma, hasDatabase } from "@/lib/prisma";
-import { getVehicle } from "@/config/fleet";
+import { getVehicle, type VehicleSpec } from "@/config/fleet";
+import { fleetOverrides } from "@/lib/fleet-store";
+import { computeRideFinance, type RideFinance } from "@/lib/pricing";
 import { generateBookingCode } from "@/lib/utils";
 
 export interface BookingInput {
@@ -19,7 +21,19 @@ export interface BookingInput {
   extraKmRate: number;
 }
 
-export interface BookingRecord extends BookingInput {
+/** Trip close-out — filled in by an admin once the ride is done. */
+export interface BookingSettlement {
+  /** Kilometres actually run. Null until the trip closes. */
+  actualKm?: number | null;
+  /** Manual override of the driver payout; null falls back to the rate card. */
+  driverAmount?: number | null;
+  /** Total taken from the customer so far; null means only the deposit. */
+  collectedAmount?: number | null;
+  driverSettled: boolean;
+  settledAt?: string | null;
+}
+
+export interface BookingRecord extends BookingInput, BookingSettlement {
   id: string;
   bookingCode: string;
   status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
@@ -27,12 +41,34 @@ export interface BookingRecord extends BookingInput {
   vehicleName: string;
   paymentId?: string;
   createdAt: string;
+  /** Derived on read from the live driver rates — never stored. */
+  finance: RideFinance;
 }
 
+type DriverRates = Pick<
+  VehicleSpec,
+  "driverBasePrice" | "driverPerDayPrice" | "driverExtraKmRate" | "driverBata"
+>;
+
+/** Deposit taken online at reservation — mirrors pricing.BOOKING_AMOUNT. */
+const BOOKING_DEPOSIT = 199;
+
 /** In-memory fallback so the full booking flow works without a database. */
-const globalStore = globalThis as unknown as { __bookings?: Map<string, BookingRecord> };
-const memory: Map<string, BookingRecord> =
+type StoredBooking = Omit<BookingRecord, "finance">;
+const globalStore = globalThis as unknown as { __bookings?: Map<string, StoredBooking> };
+const memory: Map<string, StoredBooking> =
   globalStore.__bookings ?? (globalStore.__bookings = new Map());
+
+/** Demo-mode driver rates, with any admin fleet override applied. */
+function demoRates(slug: string): DriverRates | undefined {
+  const spec = getVehicle(slug);
+  if (!spec) return undefined;
+  return { ...spec, ...fleetOverrides.get(slug) };
+}
+
+function withFinance(b: StoredBooking, rates?: DriverRates): BookingRecord {
+  return { ...b, finance: computeRideFinance(b, rates) };
+}
 
 export async function createBooking(input: BookingInput): Promise<BookingRecord> {
   const bookingCode = generateBookingCode();
@@ -68,38 +104,65 @@ export async function createBooking(input: BookingInput): Promise<BookingRecord>
         phoneVerified: true,
       },
     });
-    return {
-      ...input,
-      id: b.id,
-      bookingCode,
-      status: "PENDING",
-      bookingAmount: b.bookingAmount,
-      vehicleName: vehicle.name,
-      createdAt: b.createdAt.toISOString(),
-    };
+    return withFinance(
+      {
+        ...input,
+        id: b.id,
+        bookingCode,
+        status: "PENDING",
+        bookingAmount: b.bookingAmount,
+        vehicleName: vehicle.name,
+        driverSettled: false,
+        createdAt: b.createdAt.toISOString(),
+      },
+      vehicle
+    );
   }
 
-  const record: BookingRecord = {
+  const record: StoredBooking = {
     ...input,
     id: crypto.randomUUID(),
     bookingCode,
     status: "PENDING",
-    bookingAmount: 199,
+    bookingAmount: BOOKING_DEPOSIT,
     vehicleName: spec.name,
+    driverSettled: false,
     createdAt: new Date().toISOString(),
   };
   memory.set(record.id, record);
-  return record;
+  return withFinance(record, demoRates(input.vehicleSlug));
 }
 
-export async function getBooking(id: string): Promise<BookingRecord | null> {
-  if (hasDatabase) {
-    const b = await prisma.booking.findFirst({
-      where: { OR: [{ id }, { bookingCode: id }] },
-      include: { vehicle: true },
-    });
-    if (!b) return null;
-    return {
+type BookingRow = {
+  id: string;
+  bookingCode: string;
+  tripType: string;
+  days: number;
+  passengers: number;
+  pickup: string;
+  destination: string;
+  pickupDate: Date;
+  pickupTime: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  estimateTotal: number;
+  includedKm: number;
+  extraKmRate: number;
+  status: string;
+  bookingAmount: number;
+  actualKm: number | null;
+  driverAmount: number | null;
+  collectedAmount: number | null;
+  driverSettled: boolean;
+  settledAt: Date | null;
+  createdAt: Date;
+  vehicle: { slug: string; name: string } & DriverRates;
+};
+
+function fromRow(b: BookingRow): BookingRecord {
+  return withFinance(
+    {
       id: b.id,
       bookingCode: b.bookingCode,
       tripType: b.tripType as BookingRecord["tripType"],
@@ -119,11 +182,27 @@ export async function getBooking(id: string): Promise<BookingRecord | null> {
       extraKmRate: b.extraKmRate,
       status: b.status as BookingRecord["status"],
       bookingAmount: b.bookingAmount,
+      actualKm: b.actualKm,
+      driverAmount: b.driverAmount,
+      collectedAmount: b.collectedAmount,
+      driverSettled: b.driverSettled,
+      settledAt: b.settledAt?.toISOString() ?? null,
       createdAt: b.createdAt.toISOString(),
-    };
+    },
+    b.vehicle
+  );
+}
+
+export async function getBooking(id: string): Promise<BookingRecord | null> {
+  if (hasDatabase) {
+    const b = await prisma.booking.findFirst({
+      where: { OR: [{ id }, { bookingCode: id }] },
+      include: { vehicle: true },
+    });
+    return b ? fromRow(b as unknown as BookingRow) : null;
   }
   for (const b of memory.values()) {
-    if (b.id === id || b.bookingCode === id) return b;
+    if (b.id === id || b.bookingCode === id) return withFinance(b, demoRates(b.vehicleSlug));
   }
   return null;
 }
@@ -137,7 +216,7 @@ export async function confirmBooking(id: string, paymentId: string): Promise<Boo
   if (!b) return null;
   b.status = "CONFIRMED";
   b.paymentId = paymentId;
-  return b;
+  return withFinance(b, demoRates(b.vehicleSlug));
 }
 
 export async function listBookings(): Promise<BookingRecord[]> {
@@ -145,32 +224,13 @@ export async function listBookings(): Promise<BookingRecord[]> {
     const rows = await prisma.booking.findMany({
       orderBy: { createdAt: "desc" },
       include: { vehicle: true },
-      take: 200,
+      take: 500,
     });
-    return rows.map((b) => ({
-      id: b.id,
-      bookingCode: b.bookingCode,
-      tripType: b.tripType as BookingRecord["tripType"],
-      days: b.days,
-      passengers: b.passengers,
-      vehicleSlug: b.vehicle.slug,
-      vehicleName: b.vehicle.name,
-      pickup: b.pickup,
-      destination: b.destination,
-      pickupDate: b.pickupDate.toISOString(),
-      pickupTime: b.pickupTime,
-      name: b.name,
-      phone: b.phone,
-      email: b.email ?? undefined,
-      estimateTotal: b.estimateTotal,
-      includedKm: b.includedKm,
-      extraKmRate: b.extraKmRate,
-      status: b.status as BookingRecord["status"],
-      bookingAmount: b.bookingAmount,
-      createdAt: b.createdAt.toISOString(),
-    }));
+    return rows.map((b) => fromRow(b as unknown as BookingRow));
   }
-  return [...memory.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return [...memory.values()]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((b) => withFinance(b, demoRates(b.vehicleSlug)));
 }
 
 export interface BookingPatch {
@@ -190,11 +250,15 @@ export interface BookingPatch {
   bookingAmount?: number;
   includedKm?: number;
   extraKmRate?: number;
+  actualKm?: number | null;
+  driverAmount?: number | null;
+  collectedAmount?: number | null;
+  driverSettled?: boolean;
 }
 
 /** Admin edit — any subset of booking fields, including fare and contact details. */
 export async function updateBooking(id: string, patch: BookingPatch): Promise<BookingRecord | null> {
-  const { vehicleSlug, pickupDate, ...rest } = patch;
+  const { vehicleSlug, pickupDate, driverSettled, ...rest } = patch;
 
   if (hasDatabase) {
     const current = await prisma.booking.findUnique({ where: { id } });
@@ -206,6 +270,11 @@ export async function updateBooking(id: string, patch: BookingPatch): Promise<Bo
       const vehicle = await prisma.vehicle.findUnique({ where: { slug: vehicleSlug } });
       if (!vehicle) throw new Error("Unknown vehicle");
       data.vehicleId = vehicle.id;
+    }
+    /* Settling stamps the date; un-settling clears it. */
+    if (driverSettled !== undefined) {
+      data.driverSettled = driverSettled;
+      data.settledAt = driverSettled ? new Date() : null;
     }
     /* Contact edits follow through to the customer record so the customers view
        and any later booking on that phone stay consistent. Upserting by the new
@@ -228,15 +297,21 @@ export async function updateBooking(id: string, patch: BookingPatch): Promise<Bo
 
   const b = memory.get(id);
   if (!b) return null;
-  for (const [k, v] of Object.entries(rest)) if (v !== undefined) (b as unknown as Record<string, unknown>)[k] = v;
+  for (const [k, v] of Object.entries(rest)) {
+    if (v !== undefined) (b as unknown as Record<string, unknown>)[k] = v;
+  }
   if (pickupDate) b.pickupDate = pickupDate;
+  if (driverSettled !== undefined) {
+    b.driverSettled = driverSettled;
+    b.settledAt = driverSettled ? new Date().toISOString() : null;
+  }
   if (vehicleSlug) {
     const spec = getVehicle(vehicleSlug);
     if (!spec) throw new Error("Unknown vehicle");
     b.vehicleSlug = vehicleSlug;
     b.vehicleName = spec.name;
   }
-  return b;
+  return withFinance(b, demoRates(b.vehicleSlug));
 }
 
 /**

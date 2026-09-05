@@ -6,7 +6,7 @@ import { Loader2, X } from "lucide-react";
 import type { BookingRecord } from "@/lib/booking-store";
 import type { VehicleSpec } from "@/config/fleet";
 import { computePricing } from "@/lib/pricing";
-import { formatINR, cn } from "@/lib/utils";
+import { formatINR, isoDate, isoDateOffset, cn } from "@/lib/utils";
 import { Input, Select } from "@/components/ui/input";
 import { Field, darkField as dark } from "@/components/admin/ui";
 
@@ -18,14 +18,14 @@ const STATUSES = ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"] as const;
 type Draft = Record<string, string>;
 
 function toDraft(b?: BookingRecord): Draft {
-  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().split("T")[0];
+  const tomorrow = isoDateOffset(1);
   return {
     name: b?.name ?? "",
     phone: b?.phone ?? "",
     email: b?.email ?? "",
     pickup: b?.pickup ?? "",
     destination: b?.destination ?? "",
-    pickupDate: b ? b.pickupDate.split("T")[0] : tomorrow,
+    pickupDate: b ? isoDate(b.pickupDate) : tomorrow,
     pickupTime: b?.pickupTime ?? "09:00",
     tripType: b?.tripType ?? "ONE_DAY",
     days: String(b?.days ?? 1),

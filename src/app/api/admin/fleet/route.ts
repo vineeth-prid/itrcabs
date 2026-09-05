@@ -20,6 +20,9 @@ const patchSchema = z.object({
   perDayPrice: z.number().int().min(500).max(100000).optional(),
   extraKmRate: z.number().int().min(5).max(200).optional(),
   driverBata: z.number().int().min(0).max(5000).optional(),
+  driverBasePrice: z.number().int().min(0).max(100000).optional(),
+  driverPerDayPrice: z.number().int().min(0).max(100000).optional(),
+  driverExtraKmRate: z.number().int().min(0).max(200).optional(),
   available: z.boolean().optional(),
 });
 
