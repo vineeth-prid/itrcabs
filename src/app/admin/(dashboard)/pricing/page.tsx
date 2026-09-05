@@ -10,21 +10,21 @@ export default function AdminPricingPage() {
     <>
       <PageTitle
         title="Pricing engine"
-        sub="What the customer pays, what the driver is paid, and the margin between them — editable in Fleet"
+        sub="Minimum fares, the driver rate card, and the margin between them — editable in Fleet"
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="One-day included KM" value={`${ONE_DAY_INCLUDED_KM} km`} hint="Per one-day booking" accent />
-        <StatCard label="Multi-day included KM" value={`${MULTI_DAY_INCLUDED_KM} km/day`} hint="Carries over within trip" />
+        <StatCard label="One-day included KM" value={`${ONE_DAY_INCLUDED_KM} km`} hint="Covered by the one-day minimum" accent />
+        <StatCard label="Multi-day included KM" value={`${MULTI_DAY_INCLUDED_KM} km/day`} hint="Covered by the per-day minimum" />
         <StatCard label="Booking amount" value={formatINR(BOOKING_AMOUNT)} hint="Collected online at reservation" />
-        <StatCard label="Extras" value="At actuals" hint="Toll · parking · night charges" />
+        <StatCard label="Billed after the trip" value="Extra km" hint="Priced from the odometer at close-out" />
       </div>
 
       <Panel className="mt-6 overflow-x-auto p-0">
         <table className="w-full min-w-[900px] text-left text-sm">
           <thead>
             <tr className="border-b border-white/8 text-[11px] uppercase tracking-wider text-cream/40">
-              {["Vehicle", "One-day base", "Driver gets", "Margin", "Multi-day /day", "Driver gets", "Extra KM", "Driver gets", "Bata"].map((h, i) => (
+              {["Vehicle", "One-day minimum", "Driver gets", "Margin", "Multi-day /day", "Driver gets", "Extra KM", "Driver gets", "Bata"].map((h, i) => (
                 <th key={h + i} className="px-5 py-4 font-semibold">{h}</th>
               ))}
             </tr>

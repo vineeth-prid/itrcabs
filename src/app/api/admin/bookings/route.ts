@@ -10,8 +10,12 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const bookings = await listBookings();
-  return NextResponse.json({ bookings });
+  try {
+    const bookings = await listBookings();
+    return NextResponse.json({ bookings });
+  } catch (e) {
+    return failed(e);
+  }
 }
 
 const status = z.enum(["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]);
@@ -37,6 +41,8 @@ const fields = {
 
 const postSchema = z.object({
   ...fields,
+  driverName: z.string().max(80).nullable().optional(),
+  driverVehicleNo: z.string().max(20).nullable().optional(),
   days: fields.days.default(1),
   estimateTotal: money.optional(),
   bookingAmount: money.optional(),
@@ -48,6 +54,8 @@ const postSchema = z.object({
 const nullableMoney = money.nullable();
 const patchSchema = z.object(fields).partial().extend({
   id: z.string().min(1),
+  driverName: z.string().max(80).nullable().optional(),
+  driverVehicleNo: z.string().max(20).nullable().optional(),
   actualKm: z.number().int().min(0).max(20000).nullable().optional(),
   driverAmount: nullableMoney.optional(),
   collectedAmount: nullableMoney.optional(),
@@ -59,32 +67,69 @@ function bad(e: z.ZodError) {
   return NextResponse.json({ error: `${issue.path.join(".")}: ${issue.message}` }, { status: 400 });
 }
 
+/**
+ * Turns a failure into something an admin can act on. The common one right
+ * after a deploy is a database that has not had `prisma db push` run against
+ * it, where Prisma reports a missing column — meaningless in the UI.
+ */
+function failed(e: unknown) {
+  const message = e instanceof Error ? e.message : String(e);
+  const stale = /column .* does not exist|Unknown argument|P2022/i.test(message);
+  console.error("Admin bookings API error:", e);
+  return NextResponse.json(
+    {
+      error: stale
+        ? "The database is missing columns this version needs — run `npx prisma db push` against it, then reload."
+        : message,
+    },
+    { status: stale ? 503 : 500 }
+  );
+}
+
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const parsed = postSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad(parsed.error);
-  const { status: newStatus, estimateTotal, bookingAmount, email, ...data } = parsed.data;
+  const {
+    status: newStatus,
+    estimateTotal,
+    bookingAmount,
+    email,
+    driverName,
+    driverVehicleNo,
+    ...data
+  } = parsed.data;
 
-  const vehicle = await getEffectiveVehicle(data.vehicleSlug);
-  if (!vehicle) return NextResponse.json({ error: "Unknown vehicle" }, { status: 400 });
+  try {
+    const vehicle = await getEffectiveVehicle(data.vehicleSlug);
+    if (!vehicle) return NextResponse.json({ error: "Unknown vehicle" }, { status: 400 });
 
-  const pricing = computePricing(vehicle, data.tripType, data.days);
-  const booking = await createBooking({
-    ...data,
-    email: email || undefined,
-    estimateTotal: estimateTotal ?? pricing.estimateTotal,
-    includedKm: pricing.includedKm,
-    extraKmRate: vehicle.extraKmRate,
-  });
+    const pricing = computePricing(vehicle, data.tripType, data.days);
+    const booking = await createBooking({
+      ...data,
+      email: email || undefined,
+      estimateTotal: estimateTotal ?? pricing.estimateTotal,
+      includedKm: pricing.includedKm,
+      extraKmRate: vehicle.extraKmRate,
+    });
 
-  // createBooking always starts PENDING at the default deposit — apply admin overrides after.
-  const final =
-    newStatus !== "PENDING" || bookingAmount !== undefined
-      ? await updateBooking(booking.id, { status: newStatus, bookingAmount })
+    /* createBooking always starts PENDING, at the default deposit, with no
+       driver — apply the admin's overrides straight after. */
+    const overrides = {
+      ...(newStatus !== "PENDING" && { status: newStatus }),
+      ...(bookingAmount !== undefined && { bookingAmount }),
+      ...(driverName !== undefined && { driverName }),
+      ...(driverVehicleNo !== undefined && { driverVehicleNo }),
+    };
+    const final = Object.keys(overrides).length
+      ? await updateBooking(booking.id, overrides)
       : booking;
-  return NextResponse.json({ ok: true, booking: final ?? booking });
+    return NextResponse.json({ ok: true, booking: final ?? booking });
+  } catch (e) {
+    return failed(e);
+  }
 }
 
 export async function PATCH(req: Request) {
@@ -95,10 +140,14 @@ export async function PATCH(req: Request) {
   if (!parsed.success) return bad(parsed.error);
   const { id, email, ...patch } = parsed.data;
 
-  const booking = await updateBooking(id, {
-    ...patch,
-    ...(email !== undefined && { email: email || undefined }),
-  });
-  if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-  return NextResponse.json({ ok: true, booking });
+  try {
+    const booking = await updateBooking(id, {
+      ...patch,
+      ...(email !== undefined && { email: email || undefined }),
+    });
+    if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    return NextResponse.json({ ok: true, booking });
+  } catch (e) {
+    return failed(e);
+  }
 }

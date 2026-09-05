@@ -161,6 +161,8 @@ model Booking {
   driver        Driver?       @relation(fields: [driverId], references: [id])
   driverId      String?
   payment       Payment?
+  driverName    String?
+  driverVehicleNo String?
   actualKm      Int?
   driverAmount  Int?
   collectedAmount Int?

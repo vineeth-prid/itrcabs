@@ -47,39 +47,50 @@ export function computePricing(
   };
 }
 
+
 /* ── Per-ride economics ──────────────────────────────────────────────
-   The customer pays our rate card; the driver is paid a lower one. Both
-   sides run on the same actual kilometres, so one trip closes out into a
-   balance still to collect, a driver payout to settle, and the margin. */
+   The quoted fare is a MINIMUM, not the price. It buys a fixed kilometre
+   allowance; what the trip actually costs is only known when it ends and the
+   odometer reading goes in. So every trip has two states:
+
+     open    — only the minimum is known. Figures are provisional.
+     closed  — actual kilometres recorded. Fare, driver payout and margin
+               are final, and the trip can be settled with the driver.
+
+   The customer pays our rate card, the driver is paid a lower one, and both
+   run off the same actual kilometres — so the margin follows the trip. */
 
 export interface RideFinance {
-  /** Kilometres covered by the quoted fare. */
+  /** Kilometres covered by the minimum fare. */
   includedKm: number;
-  /** Kilometres beyond the allowance — 0 until actual km are entered. */
+  /** Kilometres beyond the allowance — 0 while the trip is open. */
   extraKm: number;
-  customerExtra: number;
-  /** Fare owed by the customer, quote plus extra kilometres. */
+  extraCharge: number;
+  /** The quoted floor: what the trip costs even if it never leaves the yard. */
+  minimumFare: number;
+  /** Minimum plus extra kilometres. Equals the minimum while open. */
   customerTotal: number;
   driverTotal: number;
   collected: number;
-  /** Still to collect from the customer at drop-off. */
+  /** Still to collect from the customer. Only meaningful once closed. */
   balanceDue: number;
   profit: number;
   /** Profit as a percentage of the customer total. */
   margin: number;
-  /** False until actual km are entered — every figure above is provisional. */
+  /** True once actual kilometres are in — until then every figure is a floor. */
   closed: boolean;
 }
 
 export type FinanceBooking = {
   tripType: "ONE_DAY" | "MULTI_DAY";
   days: number;
+  /** The quoted minimum fare for the trip. */
   estimateTotal: number;
   includedKm: number;
   extraKmRate: number;
   bookingAmount: number;
   actualKm?: number | null;
-  /** Manual override of the driver payout — wins over the computed rate. */
+  /** Manual override of the driver payout — wins over the rate card. */
   driverAmount?: number | null;
   /** Total taken from the customer so far; defaults to the deposit. */
   collectedAmount?: number | null;
@@ -92,9 +103,10 @@ type DriverRates = Pick<
 
 export function computeRideFinance(b: FinanceBooking, v?: DriverRates): RideFinance {
   const days = b.tripType === "ONE_DAY" ? 1 : Math.max(2, b.days);
-  const extraKm = b.actualKm != null ? Math.max(0, b.actualKm - b.includedKm) : 0;
-  const customerExtra = extraKm * b.extraKmRate;
-  const customerTotal = b.estimateTotal + customerExtra;
+  const closed = b.actualKm != null;
+  const extraKm = closed ? Math.max(0, b.actualKm! - b.includedKm) : 0;
+  const extraCharge = extraKm * b.extraKmRate;
+  const customerTotal = b.estimateTotal + extraCharge;
 
   /* Driver bata is the driver's allowance, so it passes straight through. */
   const driverBase = v
@@ -110,13 +122,15 @@ export function computeRideFinance(b: FinanceBooking, v?: DriverRates): RideFina
   return {
     includedKm: b.includedKm,
     extraKm,
-    customerExtra,
+    extraCharge,
+    minimumFare: b.estimateTotal,
     customerTotal,
     driverTotal,
     collected,
-    balanceDue: Math.max(0, customerTotal - collected),
+    /* An open trip has no final bill, so nothing is "due" yet. */
+    balanceDue: closed ? Math.max(0, customerTotal - collected) : 0,
     profit,
     margin: customerTotal ? Math.round((profit / customerTotal) * 100) : 0,
-    closed: b.actualKm != null,
+    closed,
   };
 }

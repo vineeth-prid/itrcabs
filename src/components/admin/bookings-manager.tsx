@@ -15,7 +15,7 @@ const STATUSES = ["ALL", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"] as co
 function exportCsv(rows: BookingRecord[]) {
   const header = [
     "Booking ID", "Status", "Name", "Phone", "Pickup", "Destination",
-    "Date", "Time", "Trip", "Days", "Passengers", "Vehicle", "Quoted fare",
+    "Date", "Time", "Trip", "Days", "Passengers", "Vehicle", "Driver", "Car number", "Minimum fare",
     "Included KM", "Actual KM", "Extra KM", "Customer total", "Collected",
     "Balance due", "Driver payout", "Profit", "Driver settled",
   ];
@@ -23,7 +23,8 @@ function exportCsv(rows: BookingRecord[]) {
     [
       b.bookingCode, b.status, b.name, b.phone, b.pickup, b.destination,
       b.pickupDate.split("T")[0], b.pickupTime, b.tripType, b.days,
-      b.passengers, b.vehicleName, b.estimateTotal, b.includedKm,
+      b.passengers, b.vehicleName, b.driverName ?? "", b.driverVehicleNo ?? "",
+      b.estimateTotal, b.includedKm,
       b.actualKm ?? "", b.finance.extraKm, b.finance.customerTotal, b.finance.collected,
       b.finance.balanceDue, b.finance.driverTotal, b.finance.profit,
       b.driverSettled ? "Yes" : "No",
@@ -133,10 +134,10 @@ export function BookingsManager() {
         ) : filtered.length === 0 ? (
           <p className="py-16 text-center text-sm text-cream/40">No bookings match.</p>
         ) : (
-          <table className="w-full min-w-[1100px] text-left text-sm">
+          <table className="w-full min-w-[1320px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/8 text-[11px] uppercase tracking-wider text-cream/40">
-                {["Booking", "Customer", "Route & pickup", "Vehicle", "Fare", "Balance", "Profit", "Status", "Actions"].map((h) => (
+                {["Booking", "Customer", "Route & pickup", "Vehicle", "Driver", "Fare", "Balance", "Profit", "Status", "Actions"].map((h) => (
                   <th key={h} className="px-5 py-4 font-semibold">{h}</th>
                 ))}
               </tr>
@@ -155,18 +156,32 @@ export function BookingsManager() {
                     <p className="text-xs text-cream/50">{b.phone}</p>
                   </td>
                   <td className="px-5 py-4">
-                    <p className="text-cream/80">{b.pickup} → {b.destination}</p>
-                    <p className="text-xs text-cream/50">
+                    <p className="whitespace-nowrap text-cream/80">
+                      {b.pickup} → {b.destination}
+                    </p>
+                    <p className="whitespace-nowrap text-xs text-cream/50">
                       {formatDate(b.pickupDate)} · {b.pickupTime} ·{" "}
                       {b.tripType === "ONE_DAY" ? "1 day" : `${b.days} days`} · {b.passengers} pax
                     </p>
                   </td>
                   <td className="px-5 py-4 text-cream/80">{b.vehicleName}</td>
+                  <td className="px-5 py-4">
+                    {b.driverName ? (
+                      <>
+                        <p className="text-cream/80">{b.driverName}</p>
+                        {b.driverVehicleNo && (
+                          <p className="font-mono text-xs text-cream/40">{b.driverVehicleNo}</p>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-cream/30">Unassigned</span>
+                    )}
+                  </td>
                   <td className="px-5 py-4 font-semibold tabular-nums text-white">
                     {formatINR(b.finance.customerTotal)}
-                    {b.finance.extraKm > 0 && (
-                      <p className="text-xs font-normal text-cream/40">+{b.finance.extraKm} km</p>
-                    )}
+                    <p className="text-xs font-normal text-cream/40">
+                      {b.finance.closed ? `+${b.finance.extraKm} km` : "minimum"}
+                    </p>
                   </td>
                   <td
                     className={cn(
@@ -174,7 +189,7 @@ export function BookingsManager() {
                       b.finance.balanceDue > 0 ? "font-semibold text-amber-300" : "text-cream/40"
                     )}
                   >
-                    {formatINR(b.finance.balanceDue)}
+                    {b.finance.closed ? formatINR(b.finance.balanceDue) : "—"}
                   </td>
                   <td
                     className={cn(
@@ -186,7 +201,7 @@ export function BookingsManager() {
                           : "text-gold-300"
                     )}
                   >
-                    {b.status === "CANCELLED" ? "—" : formatINR(b.finance.profit)}
+                    {b.status === "CANCELLED" || !b.finance.closed ? "—" : formatINR(b.finance.profit)}
                   </td>
                   <td className="px-5 py-4"><StatusBadge status={b.status} /></td>
                   <td className="px-5 py-4">

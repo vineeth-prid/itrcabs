@@ -21,8 +21,12 @@ export interface BookingInput {
   extraKmRate: number;
 }
 
-/** Trip close-out — filled in by an admin once the ride is done. */
+/** Assignment + close-out — filled in by an admin as the trip progresses. */
 export interface BookingSettlement {
+  /** Who is driving. Recorded on the booking so settlement history stays
+      correct even if the driver later leaves or changes vehicle. */
+  driverName?: string | null;
+  driverVehicleNo?: string | null;
   /** Kilometres actually run. Null until the trip closes. */
   actualKm?: number | null;
   /** Manual override of the driver payout; null falls back to the rate card. */
@@ -151,6 +155,8 @@ type BookingRow = {
   extraKmRate: number;
   status: string;
   bookingAmount: number;
+  driverName: string | null;
+  driverVehicleNo: string | null;
   actualKm: number | null;
   driverAmount: number | null;
   collectedAmount: number | null;
@@ -182,6 +188,8 @@ function fromRow(b: BookingRow): BookingRecord {
       extraKmRate: b.extraKmRate,
       status: b.status as BookingRecord["status"],
       bookingAmount: b.bookingAmount,
+      driverName: b.driverName,
+      driverVehicleNo: b.driverVehicleNo,
       actualKm: b.actualKm,
       driverAmount: b.driverAmount,
       collectedAmount: b.collectedAmount,
@@ -250,6 +258,8 @@ export interface BookingPatch {
   bookingAmount?: number;
   includedKm?: number;
   extraKmRate?: number;
+  driverName?: string | null;
+  driverVehicleNo?: string | null;
   actualKm?: number | null;
   driverAmount?: number | null;
   collectedAmount?: number | null;

@@ -7,23 +7,23 @@ import type { BookingRecord } from "@/lib/booking-store";
 import type { VehicleSpec } from "@/config/fleet";
 import { computeRideFinance } from "@/lib/pricing";
 import { formatINR, formatDate, cn } from "@/lib/utils";
-import { summarise } from "@/lib/analytics";
+import { summarise, inRange, matches, byDriver, knownDrivers } from "@/lib/analytics";
 import { PageTitle, Panel, StatCard, Field, darkField } from "@/components/admin/ui";
+import { FilterBar, useDateRange, filterChip } from "@/components/admin/filter-bar";
 import { Input } from "@/components/ui/input";
 import { useAdminBookings } from "@/components/admin/use-admin-bookings";
 
-/* A trip is settled in two moves: record what actually happened (kilometres and
-   money taken), then pay the driver. The filters below follow that order. */
+/* A trip settles in three moves: assign a driver, record what actually
+   happened (odometer and money taken), then pay the driver. The filters
+   below follow that order. */
 const FILTERS = {
   closeout: { label: "Awaiting close-out", test: (b: BookingRecord) => !b.finance.closed },
   unsettled: {
     label: "To pay drivers",
     test: (b: BookingRecord) => b.finance.closed && !b.driverSettled,
   },
-  balance: {
-    label: "Balance due",
-    test: (b: BookingRecord) => b.finance.balanceDue > 0,
-  },
+  balance: { label: "Balance due", test: (b: BookingRecord) => b.finance.balanceDue > 0 },
+  unassigned: { label: "No driver", test: (b: BookingRecord) => !b.driverName },
   settled: { label: "Settled", test: (b: BookingRecord) => b.driverSettled },
   all: { label: "All trips", test: () => true },
 } as const;
@@ -37,20 +37,24 @@ async function patchBooking(body: Record<string, unknown>) {
     body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error ?? "Save failed");
+  if (!res.ok) throw new Error(json.error ?? `Save failed (${res.status})`);
   return json;
 }
 
 function CloseOutDialog({
   booking,
+  drivers,
   onClose,
   onSaved,
 }: {
   booking: BookingRecord;
+  drivers: { name: string; vehicleNo: string }[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [driverName, setDriverName] = useState(booking.driverName ?? "");
+  const [vehicleNo, setVehicleNo] = useState(booking.driverVehicleNo ?? "");
   const [actualKm, setActualKm] = useState(booking.actualKm?.toString() ?? "");
   const [collected, setCollected] = useState(
     (booking.collectedAmount ?? booking.bookingAmount).toString()
@@ -60,10 +64,12 @@ function CloseOutDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => ref.current?.showModal(), []);
+  useEffect(() => {
+    ref.current?.showModal();
+  }, []);
 
   /* The vehicle's driver rates make the preview exact: extra kilometres cost
-     the driver too, so the payout moves with the km field, not just the fare. */
+     the driver too, so the payout moves with the odometer, not just the fare. */
   const { data: vehicles = [] } = useQuery<(VehicleSpec & { available: boolean })[]>({
     queryKey: ["admin-fleet"],
     queryFn: async () => {
@@ -74,10 +80,11 @@ function CloseOutDialog({
   });
   const rates = vehicles.find((v) => v.slug === booking.vehicleSlug);
 
+  const km = actualKm.trim();
   const preview = computeRideFinance(
     {
       ...booking,
-      actualKm: actualKm === "" ? null : Number(actualKm),
+      actualKm: km === "" ? null : Number(km),
       driverAmount: driverOverride === "" ? null : Number(driverOverride),
       collectedAmount: collected === "" ? null : Number(collected),
     },
@@ -88,14 +95,27 @@ function CloseOutDialog({
     rates || driverOverride !== "" ? preview.driverTotal : booking.finance.driverTotal;
   const profit = preview.customerTotal - driverTotal;
 
+  /* Picking a known driver fills in the car they usually drive. */
+  const onDriverPicked = (value: string) => {
+    setDriverName(value);
+    const known = drivers.find((d) => d.name === value);
+    if (known?.vehicleNo && !vehicleNo) setVehicleNo(known.vehicleNo);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (settled && km === "") {
+      setError("Record the odometer reading before marking the driver paid.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       await patchBooking({
         id: booking.id,
-        actualKm: actualKm === "" ? null : Number(actualKm),
+        driverName: driverName.trim() || null,
+        driverVehicleNo: vehicleNo.trim() || null,
+        actualKm: km === "" ? null : Number(km),
         collectedAmount: collected === "" ? null : Number(collected),
         driverAmount: driverOverride === "" ? null : Number(driverOverride),
         driverSettled: settled,
@@ -123,7 +143,7 @@ function CloseOutDialog({
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && ref.current?.close()}
-      className="m-auto w-[min(34rem,92vw)] rounded-2xl border border-white/10 bg-ink p-0 text-cream backdrop:bg-ink/80 backdrop:backdrop-blur-sm"
+      className="m-auto w-[min(36rem,92vw)] rounded-2xl border border-white/10 bg-ink p-0 text-cream backdrop:bg-ink/80 backdrop:backdrop-blur-sm"
     >
       <form onSubmit={submit} className="max-h-[88vh] overflow-y-auto p-6 sm:p-8">
         <div className="mb-6 flex items-start justify-between gap-4">
@@ -144,7 +164,33 @@ function CloseOutDialog({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Actual km run" hint={`${booking.includedKm} km included in the fare`}>
+          <Field label="Driver" hint="Who ran this trip">
+            <Input
+              list="known-drivers"
+              value={driverName}
+              onChange={(e) => onDriverPicked(e.target.value)}
+              placeholder="Driver name"
+              className={darkField}
+            />
+          </Field>
+          <Field label="Car number" hint="Registration on the trip sheet">
+            <Input
+              value={vehicleNo}
+              onChange={(e) => setVehicleNo(e.target.value.toUpperCase())}
+              placeholder="KL 07 AB 1234"
+              className={darkField}
+            />
+          </Field>
+          <datalist id="known-drivers">
+            {drivers.map((d) => (
+              <option key={d.name} value={d.name} />
+            ))}
+          </datalist>
+
+          <Field
+            label="Odometer — km run"
+            hint={`${booking.includedKm} km included in the minimum fare`}
+          >
             <Input
               type="number"
               min={0}
@@ -175,7 +221,7 @@ function CloseOutDialog({
                 min={0}
                 value={driverOverride}
                 onChange={(e) => setDriverOverride(e.target.value)}
-                placeholder={String(booking.finance.driverTotal)}
+                placeholder={String(driverTotal)}
                 className={darkField}
               />
             </Field>
@@ -183,10 +229,10 @@ function CloseOutDialog({
         </div>
 
         <div className="mt-6 rounded-xl border border-white/8 bg-white/[0.03] p-4">
-          <Row label="Quoted fare" value={formatINR(booking.estimateTotal)} />
+          <Row label="Minimum fare" value={formatINR(preview.minimumFare)} />
           <Row
             label={`Extra km (${preview.extraKm} × ₹${booking.extraKmRate})`}
-            value={formatINR(preview.customerExtra)}
+            value={formatINR(preview.extraCharge)}
           />
           <Row label="Customer total" value={formatINR(preview.customerTotal)} strong />
           <div className="my-2 border-t border-white/8" />
@@ -197,14 +243,16 @@ function CloseOutDialog({
           <div className="flex justify-between gap-4 py-1.5 text-sm">
             <span className="text-cream/50">Profit</span>
             <span
-              className={cn(
-                "font-bold tabular-nums",
-                profit < 0 ? "text-red-300" : "text-gold-300"
-              )}
+              className={cn("font-bold tabular-nums", profit < 0 ? "text-red-300" : "text-gold-300")}
             >
               {formatINR(profit)}
             </span>
           </div>
+          {!preview.closed && (
+            <p className="mt-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              Provisional — these stay minimums until the odometer reading goes in.
+            </p>
+          )}
         </div>
 
         <label className="mt-5 flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 px-4 py-3">
@@ -215,7 +263,7 @@ function CloseOutDialog({
             className="size-4 accent-gold-500"
           />
           <span className="text-sm font-semibold text-cream/80">
-            Driver has been paid {formatINR(driverTotal)}
+            {driverName.trim() || "Driver"} has been paid {formatINR(driverTotal)}
           </span>
         </label>
 
@@ -253,25 +301,42 @@ function CloseOutDialog({
 export function SettlementsManager() {
   const qc = useQueryClient();
   const { data: bookings = [], isLoading, isFetching, refetch } = useAdminBookings();
+  const dates = useDateRange("month");
+  const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("closeout");
   const [editing, setEditing] = useState<BookingRecord | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin-bookings"] });
 
   const settle = useMutation({
-    mutationFn: (b: BookingRecord) =>
-      patchBooking({ id: b.id, driverSettled: !b.driverSettled }),
+    mutationFn: (b: BookingRecord) => patchBooking({ id: b.id, driverSettled: !b.driverSettled }),
     onSuccess: invalidate,
+    onError: (e: Error) => setActionError(e.message),
   });
 
+  const { from, to } = dates.range;
   /* Cancelled trips owe nobody anything. */
-  const live = useMemo(() => bookings.filter((b) => b.status !== "CANCELLED"), [bookings]);
-  const rows = useMemo(() => live.filter(FILTERS[filter].test), [live, filter]);
-  const t = useMemo(() => summarise(live), [live]);
+  const scope = useMemo(
+    () =>
+      bookings.filter((b) => b.status !== "CANCELLED" && inRange(b, from, to) && matches(b, query)),
+    [bookings, from, to, query]
+  );
+  const rows = useMemo(() => scope.filter(FILTERS[filter].test), [scope, filter]);
+  const t = useMemo(() => summarise(scope), [scope]);
+  const drivers = useMemo(() => byDriver(scope), [scope]);
+  const driverOptions = useMemo(() => knownDrivers(bookings), [bookings]);
 
   return (
     <>
-      <PageTitle title="Settlements" sub="Balance to collect, driver payouts and trip margin">
+      <PageTitle
+        title="Settlements"
+        sub={
+          from || to
+            ? `Trips from ${from ? formatDate(from) : "the start"} to ${to ? formatDate(to) : "today"}`
+            : "Every trip on record"
+        }
+      >
         <button
           onClick={() => refetch()}
           className="flex items-center gap-2 rounded-full border border-white/10 px-5 py-2.5 text-sm font-bold text-cream/70 transition-colors hover:border-gold-500/40 hover:text-gold-300"
@@ -280,7 +345,7 @@ export function SettlementsManager() {
         </button>
       </PageTitle>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Collected"
           value={formatINR(t.collected)}
@@ -290,7 +355,7 @@ export function SettlementsManager() {
         <StatCard
           label="Balance to collect"
           value={formatINR(t.balanceDue)}
-          hint="Outstanding across live trips"
+          hint="Due on closed trips"
         />
         <StatCard
           label="Owed to drivers"
@@ -300,28 +365,83 @@ export function SettlementsManager() {
         <StatCard
           label="Profit"
           value={formatINR(t.profit)}
-          hint={`${t.margin}% margin after driver costs`}
+          hint={`${t.margin}% margin on ${t.closedTrips} closed trip${t.closedTrips === 1 ? "" : "s"}`}
         />
       </div>
 
-      <Panel className="mt-6 mb-5 flex flex-wrap gap-1.5" role="group" aria-label="Filter">
-        {(Object.keys(FILTERS) as FilterKey[]).map((k) => {
-          const n = live.filter(FILTERS[k].test).length;
-          return (
-            <button
-              key={k}
-              onClick={() => setFilter(k)}
-              aria-pressed={filter === k}
-              className={cn(
-                "rounded-full px-4 py-2 text-xs font-bold tracking-wide transition-all",
-                filter === k ? "bg-gradient-gold text-ink" : "bg-white/5 text-cream/50 hover:text-white"
-              )}
-            >
-              {FILTERS[k].label} ({n})
-            </button>
-          );
-        })}
-      </Panel>
+      <FilterBar
+        dates={dates}
+        query={query}
+        onQuery={setQuery}
+        placeholder="Search driver, car number, booking, customer…"
+      />
+
+      {drivers.length > 0 && (
+        <Panel className="mb-5 overflow-x-auto p-0">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-white/8 text-[11px] uppercase tracking-wider text-cream/40">
+                {["Driver", "Car number", "Trips", "Earned", "Paid", "Still owed"].map((h) => (
+                  <th key={h} className="px-5 py-3.5 font-semibold">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {drivers.map((d) => (
+                <tr
+                  key={d.name}
+                  className="cursor-pointer border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
+                  onClick={() => setQuery(d.name)}
+                  title={`Show only ${d.name}'s trips`}
+                >
+                  <td className="px-5 py-3 font-semibold text-white">{d.name}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-cream/60">{d.vehicleNo || "—"}</td>
+                  <td className="px-5 py-3 tabular-nums text-cream/70">
+                    {d.trips}
+                    {d.awaitingCloseout > 0 && (
+                      <span className="ml-1 text-xs text-amber-300">({d.awaitingCloseout} open)</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 tabular-nums text-cream/80">{formatINR(d.earned)}</td>
+                  <td className="px-5 py-3 tabular-nums text-emerald-300">{formatINR(d.paid)}</td>
+                  <td
+                    className={cn(
+                      "px-5 py-3 font-bold tabular-nums",
+                      d.due > 0 ? "text-amber-300" : "text-cream/30"
+                    )}
+                  >
+                    {formatINR(d.due)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
+      )}
+
+      <div className="mb-5 flex flex-wrap gap-1.5" role="group" aria-label="Filter trips">
+        {(Object.keys(FILTERS) as FilterKey[]).map((k) => (
+          <button
+            key={k}
+            onClick={() => setFilter(k)}
+            aria-pressed={filter === k}
+            className={filterChip(filter === k)}
+          >
+            {FILTERS[k].label} ({scope.filter(FILTERS[k].test).length})
+          </button>
+        ))}
+      </div>
+
+      {actionError && (
+        <p
+          role="alert"
+          className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+        >
+          {actionError}
+        </p>
+      )}
 
       <Panel className="overflow-x-auto p-0">
         {isLoading ? (
@@ -329,12 +449,12 @@ export function SettlementsManager() {
         ) : rows.length === 0 ? (
           <p className="py-16 text-center text-sm text-cream/40">Nothing here — all clear.</p>
         ) : (
-          <table className="w-full min-w-[980px] text-left text-sm">
+          <table className="w-full min-w-[1080px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/8 text-[11px] uppercase tracking-wider text-cream/40">
                 {[
-                  "Trip", "Pickup", "Km", "Customer total", "Collected",
-                  "Balance", "Driver", "Profit", "Settlement",
+                  "Trip", "Pickup", "Driver", "Km", "Customer total",
+                  "Collected", "Balance", "Driver pay", "Profit", "Settlement",
                 ].map((h) => (
                   <th key={h} className="px-4 py-4 font-semibold">
                     {h}
@@ -361,21 +481,34 @@ export function SettlementsManager() {
                         {b.name} · {b.vehicleName}
                       </p>
                     </td>
-                    <td className="px-4 py-3.5 text-cream/70">{formatDate(b.pickupDate)}</td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-cream/70">
+                      {formatDate(b.pickupDate)}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {b.driverName ? (
+                        <>
+                          <p className="text-cream/80">{b.driverName}</p>
+                          {b.driverVehicleNo && (
+                            <p className="font-mono text-xs text-cream/40">{b.driverVehicleNo}</p>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs text-amber-300/70">Unassigned</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3.5 tabular-nums text-cream/70">
                       {f.closed ? (
                         <>
                           {b.actualKm}
-                          {f.extraKm > 0 && (
-                            <span className="text-gold-300"> (+{f.extraKm})</span>
-                          )}
+                          {f.extraKm > 0 && <span className="text-gold-300"> (+{f.extraKm})</span>}
                         </>
                       ) : (
                         <span className="text-cream/30">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3.5 font-semibold tabular-nums text-white">
-                      {formatINR(f.customerTotal)}
+                    <td className="px-4 py-3.5 tabular-nums text-white">
+                      <span className="font-semibold">{formatINR(f.customerTotal)}</span>
+                      {!f.closed && <p className="text-xs font-normal text-cream/40">minimum</p>}
                     </td>
                     <td className="px-4 py-3.5 tabular-nums text-cream/70">
                       {formatINR(f.collected)}
@@ -383,10 +516,10 @@ export function SettlementsManager() {
                     <td
                       className={cn(
                         "px-4 py-3.5 font-semibold tabular-nums",
-                        f.balanceDue > 0 ? "text-amber-300" : "text-cream/40"
+                        f.balanceDue > 0 ? "text-amber-300" : "text-cream/30"
                       )}
                     >
-                      {formatINR(f.balanceDue)}
+                      {f.closed ? formatINR(f.balanceDue) : "—"}
                     </td>
                     <td className="px-4 py-3.5 tabular-nums text-cream/70">
                       {formatINR(f.driverTotal)}
@@ -394,35 +527,46 @@ export function SettlementsManager() {
                     <td
                       className={cn(
                         "px-4 py-3.5 font-semibold tabular-nums",
-                        f.profit < 0 ? "text-red-300" : "text-gold-300"
+                        !f.closed ? "text-cream/30" : f.profit < 0 ? "text-red-300" : "text-gold-300"
                       )}
                     >
-                      {formatINR(f.profit)}
-                      <span className="ml-1 text-xs font-normal text-cream/35">{f.margin}%</span>
+                      {f.closed ? (
+                        <>
+                          {formatINR(f.profit)}
+                          <span className="ml-1 text-xs font-normal text-cream/35">{f.margin}%</span>
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-4 py-3.5">
                       {!f.closed ? (
                         <button
                           onClick={() => setEditing(b)}
-                          className="rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs font-bold text-amber-200 transition-colors hover:bg-amber-500/10"
+                          className="whitespace-nowrap rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs font-bold text-amber-200 transition-colors hover:bg-amber-500/10"
                         >
                           Close out
                         </button>
                       ) : (
                         <button
-                          onClick={() => settle.mutate(b)}
-                          disabled={settle.isPending}
+                          onClick={() => {
+                            setActionError(null);
+                            settle.mutate(b);
+                          }}
+                          disabled={settle.isPending || !b.driverName}
+                          title={
+                            !b.driverName
+                              ? "Assign a driver before settling"
+                              : b.driverSettled && b.settledAt
+                                ? `Settled ${formatDate(b.settledAt, true)}`
+                                : "Mark the driver as paid"
+                          }
                           className={cn(
-                            "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors disabled:opacity-50",
+                            "flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                             b.driverSettled
                               ? "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
                               : "border-white/15 text-cream/70 hover:border-gold-500/40 hover:text-gold-300"
                           )}
-                          title={
-                            b.driverSettled && b.settledAt
-                              ? `Settled ${formatDate(b.settledAt, true)}`
-                              : "Mark the driver as paid"
-                          }
                         >
                           {b.driverSettled ? (
                             <>
@@ -446,6 +590,7 @@ export function SettlementsManager() {
         <CloseOutDialog
           key={editing.id}
           booking={editing}
+          drivers={driverOptions}
           onClose={() => setEditing(null)}
           onSaved={invalidate}
         />

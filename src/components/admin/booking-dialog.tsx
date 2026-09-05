@@ -9,6 +9,8 @@ import { computePricing } from "@/lib/pricing";
 import { formatINR, isoDate, isoDateOffset, cn } from "@/lib/utils";
 import { Input, Select } from "@/components/ui/input";
 import { Field, darkField as dark } from "@/components/admin/ui";
+import { knownDrivers } from "@/lib/analytics";
+import { useAdminBookings } from "@/components/admin/use-admin-bookings";
 
 type AdminVehicle = VehicleSpec & { available: boolean };
 
@@ -32,6 +34,8 @@ function toDraft(b?: BookingRecord): Draft {
     passengers: String(b?.passengers ?? 4),
     vehicleSlug: b?.vehicleSlug ?? "",
     status: b?.status ?? "PENDING",
+    driverName: b?.driverName ?? "",
+    driverVehicleNo: b?.driverVehicleNo ?? "",
     estimateTotal: b ? String(b.estimateTotal) : "",
     bookingAmount: String(b?.bookingAmount ?? 199),
   };
@@ -50,6 +54,9 @@ export function BookingDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState<Draft>(() => toDraft(booking));
   const [fareTouched, setFareTouched] = useState(Boolean(booking));
+  /* Reuses the shared bookings cache purely to autocomplete driver names. */
+  const { data: allBookings = [] } = useAdminBookings();
+  const drivers = knownDrivers(allBookings);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,6 +102,8 @@ export function BookingDialog({
       passengers: Number(draft.passengers),
       vehicleSlug: draft.vehicleSlug,
       status: draft.status,
+      driverName: draft.driverName.trim() || null,
+      driverVehicleNo: draft.driverVehicleNo.trim() || null,
       estimateTotal: Number(draft.estimateTotal),
       bookingAmount: Number(draft.bookingAmount),
     };
@@ -277,12 +286,43 @@ export function BookingDialog({
             </Select>
           </Field>
 
+          <Field label="Driver" hint="Assign once the booking is confirmed">
+            <Input
+              list="booking-drivers"
+              value={draft.driverName}
+              onChange={(e) => {
+                const known = drivers.find((d) => d.name === e.target.value);
+                setDraft((d) => ({
+                  ...d,
+                  driverName: e.target.value,
+                  driverVehicleNo:
+                    known?.vehicleNo && !d.driverVehicleNo ? known.vehicleNo : d.driverVehicleNo,
+                }));
+              }}
+              placeholder="Driver name"
+              className={dark}
+            />
+          </Field>
+          <Field label="Car number" hint="Registration for this trip">
+            <Input
+              value={draft.driverVehicleNo}
+              onChange={(e) => set("driverVehicleNo", e.target.value.toUpperCase())}
+              placeholder="KL 07 AB 1234"
+              className={dark}
+            />
+          </Field>
+          <datalist id="booking-drivers">
+            {drivers.map((d) => (
+              <option key={d.name} value={d.name} />
+            ))}
+          </datalist>
+
           <Field
-            label="Fare estimate"
+            label="Minimum fare"
             hint={
               suggested
-                ? `Calculated: ${formatINR(suggested.estimateTotal)} · ${suggested.includedKm} km included`
-                : "Pick a vehicle to see the calculated fare"
+                ? `Rate card: ${formatINR(suggested.estimateTotal)} for ${suggested.includedKm} km. Extra km are billed at close-out.`
+                : "Pick a vehicle to see the rate-card minimum"
             }
           >
             <Input
