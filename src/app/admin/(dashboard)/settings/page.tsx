@@ -63,7 +63,7 @@ export default function AdminSettingsPage() {
             <div className="flex justify-between"><dt>Phone</dt><dd className="text-cream/90">{siteConfig.phoneDisplay}</dd></div>
             <div className="flex justify-between"><dt>Email</dt><dd className="text-cream/90">{siteConfig.email}</dd></div>
             <div className="flex justify-between"><dt>Address</dt><dd className="text-cream/90">{siteConfig.address.locality}, {siteConfig.address.region}</dd></div>
-            <div className="flex justify-between"><dt>Booking amount</dt><dd className="text-cream/90">₹{siteConfig.bookingAmount}</dd></div>
+            <div className="flex justify-between"><dt>Online payment</dt><dd className="text-cream/90">Not collected</dd></div>
           </dl>
         </Panel>
       </div>

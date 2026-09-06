@@ -25,7 +25,7 @@ export const siteConfig = {
     facebook: "https://facebook.com/itrcabs",
     whatsappLink: "https://wa.me/918089005500?text=Hi%20ITR%20Cabs%2C%20I%27d%20like%20to%20book%20a%20cab.",
   },
-  bookingAmount: 199,
+  bookingAmount: 0,
   keywords: [
     "Kochi taxi",
     "Ernakulam taxi",

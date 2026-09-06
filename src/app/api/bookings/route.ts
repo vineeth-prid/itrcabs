@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getEffectiveVehicle, fitsPassengers } from "@/lib/fleet-store";
-import { computePricing, BOOKING_AMOUNT } from "@/lib/pricing";
+import { computePricing } from "@/lib/pricing";
 import { createBooking } from "@/lib/booking-store";
-import { verifyPhoneToken } from "@/lib/otp-token";
-import { getRazorpay, razorpayConfigured } from "@/lib/razorpay";
 
 const schema = z.object({
   tripType: z.enum(["ONE_DAY", "MULTI_DAY"]),
@@ -18,7 +16,6 @@ const schema = z.object({
   name: z.string().min(2).max(80),
   phone: z.string().regex(/^[6-9]\d{9}$/),
   email: z.string().email().optional().or(z.literal("")),
-  otpToken: z.string().min(10),
 });
 
 export async function POST(req: Request) {
@@ -28,15 +25,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
   const data = parsed.data;
-
-  // Phone must be OTP-verified
-  const phoneOk = await verifyPhoneToken(data.otpToken, data.phone);
-  if (!phoneOk) {
-    return NextResponse.json(
-      { error: "Phone verification expired — please verify again" },
-      { status: 401 }
-    );
-  }
 
   // Pickup date must be in the future
   if (new Date(data.pickupDate) < new Date(new Date().toDateString())) {
@@ -80,33 +68,8 @@ export async function POST(req: Request) {
     extraKmRate: pricing.extraKmRate,
   });
 
-  // Create the ₹199 Razorpay order (or a demo order when keys are absent)
-  if (razorpayConfigured) {
-    const order = await getRazorpay().orders.create({
-      amount: BOOKING_AMOUNT * 100,
-      currency: "INR",
-      receipt: booking.bookingCode,
-      notes: { bookingId: booking.id, phone: data.phone },
-    });
-    return NextResponse.json({
-      booking,
-      payment: {
-        mode: "razorpay",
-        orderId: order.id,
-        amount: BOOKING_AMOUNT * 100,
-        currency: "INR",
-        keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? process.env.RAZORPAY_KEY_ID,
-      },
-    });
-  }
 
-  return NextResponse.json({
-    booking,
-    payment: {
-      mode: "demo",
-      orderId: `demo_${booking.id}`,
-      amount: BOOKING_AMOUNT * 100,
-      currency: "INR",
-    },
-  });
+  /* No money is taken online — the booking lands in the admin panel as an
+     enquiry, and the team confirms it and collects on their own terms. */
+  return NextResponse.json({ booking });
 }

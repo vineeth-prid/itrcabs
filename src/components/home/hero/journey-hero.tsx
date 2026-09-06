@@ -333,7 +333,7 @@ export function JourneyHero() {
             </h2>
             <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-white/70">
               GPS-tracked fleet, verified chauffeurs and transparent fares — from
-              ₹2,200 a day. Reserve yours with just ₹199.
+              ₹2,200 a day. No payment needed to book.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Magnetic>

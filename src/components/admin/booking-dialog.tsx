@@ -1,18 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Loader2, X } from "lucide-react";
 import type { BookingRecord } from "@/lib/booking-store";
-import type { VehicleSpec } from "@/config/fleet";
 import { computePricing } from "@/lib/pricing";
 import { formatINR, isoDate, isoDateOffset, cn } from "@/lib/utils";
 import { Input, Select } from "@/components/ui/input";
 import { Field, darkField as dark } from "@/components/admin/ui";
 import { knownDrivers } from "@/lib/analytics";
 import { useAdminBookings } from "@/components/admin/use-admin-bookings";
-
-type AdminVehicle = VehicleSpec & { available: boolean };
+import { useAdminFleet } from "@/components/admin/use-admin-fleet";
 
 const STATUSES = ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"] as const;
 
@@ -37,7 +34,7 @@ function toDraft(b?: BookingRecord): Draft {
     driverName: b?.driverName ?? "",
     driverVehicleNo: b?.driverVehicleNo ?? "",
     estimateTotal: b ? String(b.estimateTotal) : "",
-    bookingAmount: String(b?.bookingAmount ?? 199),
+    bookingAmount: String(b?.bookingAmount ?? 0),
   };
 }
 
@@ -60,14 +57,8 @@ export function BookingDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: vehicles = [] } = useQuery<AdminVehicle[]>({
-    queryKey: ["admin-fleet"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/fleet");
-      if (!res.ok) throw new Error("Failed to load fleet");
-      return (await res.json()).vehicles;
-    },
-  });
+  const { data: fleet } = useAdminFleet();
+  const vehicles = fleet?.vehicles ?? [];
 
   useEffect(() => ref.current?.showModal(), []);
 
@@ -337,7 +328,7 @@ export function BookingDialog({
               className={dark}
             />
           </Field>
-          <Field label="Booking amount" hint="Deposit collected up front">
+          <Field label="Collected so far" hint="Leave at 0 until money is taken">
             <Input
               required
               type="number"

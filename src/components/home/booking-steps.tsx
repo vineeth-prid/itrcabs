@@ -23,7 +23,7 @@ const steps = [
   {
     icon: ShieldCheck,
     title: "Verify & reserve",
-    text: "OTP confirms your phone, ₹199 confirms your car. Fully adjusted against the final fare.",
+    text: "Send us the trip and our team calls to confirm your car. Nothing to pay online.",
   },
   {
     icon: PartyPopper,

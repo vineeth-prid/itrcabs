@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,28 +9,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   CalendarDays, CalendarRange, Users, ArrowLeft, ArrowRight,
-  ShieldCheck, Loader2, Phone, CheckCircle2, Sparkles, Briefcase, Snowflake, Fuel,
+  ShieldCheck, Loader2, CheckCircle2, Briefcase, Snowflake, Fuel,
 } from "lucide-react";
 import { ONE_DAY_INCLUDED_KM, fitsPassengers, type VehicleSpec } from "@/config/fleet";
-import { computePricing, BOOKING_AMOUNT } from "@/lib/pricing";
+import { computePricing } from "@/lib/pricing";
 import { formatINR, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Label } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { VehicleVisual } from "@/components/brand/vehicle-visual";
-import { OtpInput } from "./otp-input";
 import { siteConfig } from "@/config/site";
 
 /* ────────────────────────────────────────────────────────── */
 
 type TripType = "ONE_DAY" | "MULTI_DAY";
-type StepId = "trip" | "vehicle" | "details" | "otp" | "pay";
+type StepId = "trip" | "vehicle" | "details";
 const STEPS: { id: StepId; label: string }[] = [
   { id: "trip", label: "Trip" },
   { id: "vehicle", label: "Vehicle" },
   { id: "details", label: "Details" },
-  { id: "otp", label: "Verify" },
-  { id: "pay", label: "Reserve" },
 ];
 
 const detailsSchema = z.object({
@@ -44,16 +41,13 @@ const detailsSchema = z.object({
 });
 type DetailsForm = z.infer<typeof detailsSchema>;
 
-declare global {
-  interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
-  }
-}
-
+/* Each step fades in on its own. There is deliberately no exit animation:
+   an AnimatePresence in mode="wait" waits for the outgoing step to finish
+   animating out, and when that never resolves the wizard freezes on the step
+   you just left — the next one never mounts. Nothing here can hang. */
 const stepVariants = {
-  enter: (dir: number) => ({ opacity: 0, x: dir * 48, filter: "blur(6px)" }),
-  center: { opacity: 1, x: 0, filter: "blur(0px)" },
-  exit: (dir: number) => ({ opacity: 0, x: dir * -48, filter: "blur(6px)" }),
+  enter: (dir: number) => ({ opacity: 0, x: dir * 48 }),
+  center: { opacity: 1, x: 0 },
 };
 
 export function BookingWizard() {
@@ -67,10 +61,6 @@ export function BookingWizard() {
   const [passengers, setPassengers] = useState(2);
   const [vehicleSlug, setVehicleSlug] = useState<string | null>(params.get("vehicle"));
   const [details, setDetails] = useState<DetailsForm | null>(null);
-  const [otp, setOtp] = useState("");
-  const [otpToken, setOtpToken] = useState<string | null>(null);
-  const [devCode, setDevCode] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,123 +92,36 @@ export function BookingWizard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
 
-  /* Resend cooldown ticker */
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = setInterval(() => setCooldown((c) => c - 1), 1000);
-    return () => clearInterval(t);
-  }, [cooldown]);
 
-  /* ── API actions ─────────────────────────────────────── */
 
-  const sendOtp = useCallback(async (phone: string) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Could not send OTP");
-      setCooldown(json.cooldown ?? 30);
-      setDevCode(json.devCode ?? null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not send OTP");
-      throw e;
-    } finally {
-      setBusy(false);
-    }
-  }, []);
-
-  const verifyOtp = useCallback(async () => {
-    if (!details) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: details.phone, code: otp }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Verification failed");
-      setOtpToken(json.token);
-      go("pay");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Verification failed");
-    } finally {
-      setBusy(false);
-    }
-  }, [details, otp, go]);
-
-  const pay = useCallback(async () => {
-    if (!details || !vehicleSlug || !otpToken) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tripType,
-          days: tripType === "MULTI_DAY" ? days : 1,
-          passengers,
-          vehicleSlug,
-          ...details,
-          otpToken,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Could not create booking");
-      const { booking, payment } = json;
-
-      const complete = async (paymentId: string, signature: string) => {
-        const vres = await fetch("/api/payments/verify", {
+  /* Submitting the form creates the enquiry outright — no verification step
+     and no money taken. The team confirms it from the admin panel. */
+  const submitBooking = useCallback(
+    async (values: DetailsForm) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/bookings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            bookingId: booking.id,
-            orderId: payment.orderId,
-            paymentId,
-            signature,
+            tripType,
+            days: tripType === "MULTI_DAY" ? days : 1,
+            passengers,
+            vehicleSlug,
+            ...values,
           }),
         });
-        const vjson = await vres.json();
-        if (!vres.ok) throw new Error(vjson.error ?? "Payment verification failed");
-        router.push(`/booking/${booking.bookingCode}`);
-      };
-
-      if (payment.mode === "razorpay") {
-        await loadRazorpay();
-        const rzp = new window.Razorpay!({
-          key: payment.keyId,
-          amount: payment.amount,
-          currency: payment.currency,
-          name: "ITR Cabs",
-          description: `Booking amount — ${booking.bookingCode}`,
-          order_id: payment.orderId,
-          prefill: { name: details.name, contact: `+91${details.phone}`, email: details.email || undefined },
-          theme: { color: "#f1940b" },
-          handler: (resp: { razorpay_payment_id: string; razorpay_signature: string }) => {
-            complete(resp.razorpay_payment_id, resp.razorpay_signature).catch((e) =>
-              setError(e instanceof Error ? e.message : "Payment verification failed")
-            );
-          },
-          modal: { ondismiss: () => setBusy(false) },
-        });
-        rzp.open();
-      } else {
-        // Demo checkout — no gateway configured
-        await new Promise((r) => setTimeout(r, 1200));
-        await complete(`demo_pay_${Date.now()}`, "demo");
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error ?? "Could not send your booking");
+        router.push(`/booking/${json.booking.bookingCode}`);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Something went wrong");
+        setBusy(false);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
-      setBusy(false);
-    }
-  }, [details, vehicleSlug, otpToken, tripType, days, passengers, router]);
+    },
+    [tripType, days, passengers, vehicleSlug, router]
+  );
 
   /* ── Layout ──────────────────────────────────────────── */
 
@@ -247,16 +150,14 @@ export function BookingWizard() {
           ))}
         </ol>
 
-        <AnimatePresence mode="wait" custom={dir}>
-          <motion.div
-            key={step}
-            custom={dir}
-            variants={stepVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          >
+        <motion.div
+          key={step}
+          custom={dir}
+          variants={stepVariants}
+          initial="enter"
+          animate="center"
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        >
             {/* STEP 1 — Trip */}
             {step === "trip" && (
               <section aria-labelledby="step-trip">
@@ -432,117 +333,14 @@ export function BookingWizard() {
                 defaults={details ?? undefined}
                 onBack={() => go("vehicle")}
                 busy={busy}
-                onSubmit={async (values) => {
+                error={error}
+                onSubmit={(values) => {
                   setDetails(values);
-                  try {
-                    await sendOtp(values.phone);
-                    setOtp("");
-                    go("otp");
-                  } catch {
-                    /* error already surfaced */
-                  }
+                  submitBooking(values);
                 }}
               />
             )}
-
-            {/* STEP 4 — OTP */}
-            {step === "otp" && details && (
-              <section aria-labelledby="step-otp" className="mx-auto max-w-md text-center">
-                <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-gold-100">
-                  <Phone className="size-7 text-gold-700" aria-hidden />
-                </span>
-                <h2 id="step-otp" className="mt-6 font-display text-3xl font-bold text-ink">
-                  Verify your number
-                </h2>
-                <p className="mt-2 text-smoke">
-                  We sent a 6-digit code to <strong className="text-ink">+91 {details.phone}</strong>
-                </p>
-                {devCode && (
-                  <p className="mx-auto mt-3 w-fit rounded-full bg-gold-100 px-4 py-1.5 text-xs font-bold text-gold-800">
-                    Demo mode — your code is {devCode}
-                  </p>
-                )}
-
-                <div className="mt-8">
-                  <OtpInput value={otp} onChange={setOtp} disabled={busy} error={Boolean(error)} />
-                </div>
-                {error && <p role="alert" className="mt-4 text-sm font-semibold text-red-600">{error}</p>}
-
-                <Button
-                  size="lg"
-                  className="mt-8 w-full"
-                  disabled={otp.length !== 6 || busy}
-                  onClick={verifyOtp}
-                >
-                  {busy ? <Loader2 className="animate-spin" aria-hidden /> : <ShieldCheck aria-hidden />}
-                  Verify & continue
-                </Button>
-
-                <div className="mt-5 flex items-center justify-between text-sm">
-                  <button className="font-semibold text-graphite underline-offset-4 hover:underline" onClick={() => go("details")}>
-                    Change number
-                  </button>
-                  <button
-                    className="font-semibold text-gold-700 underline-offset-4 hover:underline disabled:opacity-40 disabled:no-underline"
-                    disabled={cooldown > 0 || busy}
-                    onClick={() => sendOtp(details.phone).catch(() => {})}
-                  >
-                    {cooldown > 0 ? `Resend in 0:${String(cooldown).padStart(2, "0")}` : "Resend code"}
-                  </button>
-                </div>
-              </section>
-            )}
-
-            {/* STEP 5 — Pay */}
-            {step === "pay" && details && vehicle && pricing && (
-              <section aria-labelledby="step-pay" className="mx-auto max-w-lg">
-                <div className="rounded-3xl border-2 border-gold-400/60 bg-white p-8 shadow-glow">
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="size-6 text-gold-600" aria-hidden />
-                    <h2 id="step-pay" className="font-display text-2xl font-bold text-ink">
-                      Reserve for {formatINR(BOOKING_AMOUNT)}
-                    </h2>
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-smoke">
-                    A small booking amount locks in your {vehicle.name} — fully adjusted
-                    against your final fare of {formatINR(pricing.estimateTotal)}.
-                  </p>
-
-                  <dl className="mt-6 space-y-2.5 rounded-2xl bg-cream p-5 text-sm">
-                    {[
-                      ["Trip", tripType === "ONE_DAY" ? "One day" : `${pricing.days} days`],
-                      ["Vehicle", vehicle.name],
-                      ["Estimated fare", formatINR(pricing.estimateTotal)],
-                      ["Included distance", `${pricing.includedKm} km`],
-                      ["Pay now", formatINR(BOOKING_AMOUNT)],
-                      ["Balance to driver", formatINR(Math.max(0, pricing.estimateTotal - BOOKING_AMOUNT))],
-                    ].map(([k, v], i, arr) => (
-                      <div key={k} className={cn("flex justify-between", i === arr.length - 2 && "border-t hairline pt-2.5 font-bold text-ink")}>
-                        <dt className="text-graphite">{k}</dt>
-                        <dd className="font-semibold text-ink">{v}</dd>
-                      </div>
-                    ))}
-                  </dl>
-
-                  {error && <p role="alert" className="mt-4 text-sm font-semibold text-red-600">{error}</p>}
-
-                  <Button size="xl" className="mt-6 w-full" disabled={busy} onClick={pay}>
-                    {busy ? <Loader2 className="animate-spin" aria-hidden /> : <ShieldCheck aria-hidden />}
-                    Pay {formatINR(BOOKING_AMOUNT)} securely
-                  </Button>
-                  <p className="mt-3 text-center text-xs text-smoke">
-                    Powered by Razorpay · UPI, cards & netbanking · Refundable up to 24h before pickup
-                  </p>
-                </div>
-                <div className="mt-6 text-center">
-                  <button className="text-sm font-semibold text-graphite underline-offset-4 hover:underline" onClick={() => go("details")}>
-                    ← Edit trip details
-                  </button>
-                </div>
-              </section>
-            )}
-          </motion.div>
-        </AnimatePresence>
+        </motion.div>
       </div>
 
       {/* Summary sidebar */}
@@ -596,11 +394,13 @@ function DetailsStep({
   onSubmit,
   onBack,
   busy,
+  error,
 }: {
   defaults?: DetailsForm;
   onSubmit: (values: DetailsForm) => void;
   onBack: () => void;
   busy: boolean;
+  error: string | null;
 }) {
   const {
     register,
@@ -660,13 +460,19 @@ function DetailsStep({
           {errors.email && <FieldError msg={errors.email.message} />}
         </div>
 
+        {error && (
+          <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 sm:col-span-2">
+            {error}
+          </p>
+        )}
+
         <div className="mt-4 flex justify-between sm:col-span-2">
           <Button type="button" variant="ghost" size="lg" onClick={onBack}>
             <ArrowLeft aria-hidden /> Back
           </Button>
           <Button type="submit" size="lg" disabled={busy}>
             {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            Verify phone <ArrowRight aria-hidden />
+            Confirm booking <ArrowRight aria-hidden />
           </Button>
         </div>
       </form>
@@ -678,13 +484,3 @@ function FieldError({ msg }: { msg?: string }) {
   return <p role="alert" className="mt-1.5 text-[13px] font-semibold text-red-600">{msg}</p>;
 }
 
-function loadRazorpay(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.Razorpay) return resolve();
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Could not load payment gateway"));
-    document.body.appendChild(script);
-  });
-}

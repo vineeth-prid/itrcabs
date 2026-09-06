@@ -75,10 +75,44 @@ async function main() {
   assert.equal(closed.finance.profit, closed.finance.customerTotal - closed.finance.driverTotal);
   assert.ok(closed.finance.profit > 0, "the rate card must leave a margin");
 
+  /* Costs on the trip. A toll billed to both sides passes through: the customer
+     is charged and the driver reimbursed, so the margin is untouched. A
+     customer-only line is ours to keep; a driver-only line we absorb. */
+  const beforeExtras = closed.finance.profit;
+  await updateBooking(a.id, {
+    extras: [
+      { label: "Toll", amount: 300, billing: "both" },
+      { label: "Night charge", amount: 500, billing: "customer" },
+      { label: "Parking we cover", amount: 100, billing: "driver" },
+    ],
+  });
+  const withExtras = (await getBooking(a.id))!;
+  assert.equal(withExtras.finance.extrasCustomer, 800, "toll + night charge reach the customer");
+  assert.equal(withExtras.finance.extrasDriver, 400, "toll + parking reach the driver");
+  assert.equal(withExtras.finance.customerTotal, closed.finance.customerTotal + 800);
+  assert.equal(withExtras.finance.driverTotal, closed.finance.driverTotal + 400);
+  assert.equal(
+    withExtras.finance.profit,
+    beforeExtras + 400,
+    "a pass-through toll never moves the margin"
+  );
+
+  await updateBooking(a.id, { extras: [] });
+  assert.equal(
+    (await getBooking(a.id))?.finance.profit,
+    beforeExtras,
+    "clearing the costs restores the margin"
+  );
+
   // A manual payout wins over the rate card.
   await updateBooking(a.id, { driverAmount: 4000 });
   assert.equal((await getBooking(a.id))?.finance.driverTotal, 4000);
   assert.equal((await getBooking(a.id))?.finance.profit, 150);
+
+  // An override replaces the rate card, but not money the driver already spent.
+  await updateBooking(a.id, { extras: [{ label: "Toll", amount: 250, billing: "driver" }] });
+  assert.equal((await getBooking(a.id))?.finance.driverTotal, 4250);
+  await updateBooking(a.id, { extras: [] });
 
   // Settling stamps a date; un-settling clears it.
   await updateBooking(a.id, { driverSettled: true });

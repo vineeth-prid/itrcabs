@@ -1,7 +1,7 @@
 import { prisma, hasDatabase } from "@/lib/prisma";
 import { getVehicle, type VehicleSpec } from "@/config/fleet";
 import { fleetOverrides } from "@/lib/fleet-store";
-import { computeRideFinance, type RideFinance } from "@/lib/pricing";
+import { computeRideFinance, type RideFinance, type RideExtra } from "@/lib/pricing";
 import { generateBookingCode } from "@/lib/utils";
 
 export interface BookingInput {
@@ -27,6 +27,8 @@ export interface BookingSettlement {
       correct even if the driver later leaves or changes vehicle. */
   driverName?: string | null;
   driverVehicleNo?: string | null;
+  /** Toll, parking and similar line items recorded at close-out. */
+  extras?: RideExtra[] | null;
   /** Kilometres actually run. Null until the trip closes. */
   actualKm?: number | null;
   /** Manual override of the driver payout; null falls back to the rate card. */
@@ -54,8 +56,8 @@ type DriverRates = Pick<
   "driverBasePrice" | "driverPerDayPrice" | "driverExtraKmRate" | "driverBata"
 >;
 
-/** Deposit taken online at reservation — mirrors pricing.BOOKING_AMOUNT. */
-const BOOKING_DEPOSIT = 199;
+/** Nothing is collected online, so a new booking starts at zero collected. */
+const BOOKING_DEPOSIT = 0;
 
 /** In-memory fallback so the full booking flow works without a database. */
 type StoredBooking = Omit<BookingRecord, "finance">;
@@ -157,6 +159,7 @@ type BookingRow = {
   bookingAmount: number;
   driverName: string | null;
   driverVehicleNo: string | null;
+  extras: unknown;
   actualKm: number | null;
   driverAmount: number | null;
   collectedAmount: number | null;
@@ -190,6 +193,8 @@ function fromRow(b: BookingRow): BookingRecord {
       bookingAmount: b.bookingAmount,
       driverName: b.driverName,
       driverVehicleNo: b.driverVehicleNo,
+      /* Stored as JSON, so guard the shape before anything sums it. */
+      extras: Array.isArray(b.extras) ? (b.extras as RideExtra[]) : [],
       actualKm: b.actualKm,
       driverAmount: b.driverAmount,
       collectedAmount: b.collectedAmount,
@@ -260,6 +265,7 @@ export interface BookingPatch {
   extraKmRate?: number;
   driverName?: string | null;
   driverVehicleNo?: string | null;
+  extras?: RideExtra[] | null;
   actualKm?: number | null;
   driverAmount?: number | null;
   collectedAmount?: number | null;

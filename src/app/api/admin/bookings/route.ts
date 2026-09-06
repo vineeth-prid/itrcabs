@@ -56,6 +56,16 @@ const patchSchema = z.object(fields).partial().extend({
   id: z.string().min(1),
   driverName: z.string().max(80).nullable().optional(),
   driverVehicleNo: z.string().max(20).nullable().optional(),
+  extras: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(60),
+        amount: money,
+        billing: z.enum(["both", "customer", "driver"]),
+      })
+    )
+    .max(20)
+    .optional(),
   actualKm: z.number().int().min(0).max(20000).nullable().optional(),
   driverAmount: nullableMoney.optional(),
   collectedAmount: nullableMoney.optional(),

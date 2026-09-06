@@ -7,7 +7,7 @@ export const faqs: Faq[] = [
   {
     question: "How do I book a taxi with ITR Cabs in Kochi?",
     answer:
-      "Book online in under two minutes: choose your trip type (one day or multiple days), select passengers and a vehicle, enter pickup, destination, date and time, verify your phone with an OTP, and confirm with a ₹199 booking amount. You'll instantly receive a booking ID by SMS, email and WhatsApp. You can also call us on 8089 00 55 00 — we operate 24×7 from Kakkanad, Ernakulam.",
+      "Book online in under two minutes: choose your trip type (one day or multiple days), select passengers and a vehicle, then enter pickup, destination, date, time and your contact details. There is nothing to pay online — you get a booking ID straight away and our team calls to confirm your car and driver. You can also call us on 8089 00 55 00 — we operate 24×7 from Kakkanad, Ernakulam.",
   },
   {
     question: "How much does a one-day taxi cost in Ernakulam?",
@@ -40,9 +40,9 @@ export const faqs: Faq[] = [
       "Every driver holds a valid commercial licence and passes police and background verification. Every vehicle in the fleet carries commercial permits, insurance and a GPS tracker with live trip visibility. Preventive maintenance and regular inspections are logged for each vehicle.",
   },
   {
-    question: "What is the ₹199 booking amount? Is it refundable?",
+    question: "Do I have to pay anything to book?",
     answer:
-      "The ₹199 booking amount confirms your vehicle and is fully adjusted against your final fare — it is not an extra fee. If you cancel more than 24 hours before pickup, it is refunded in full to the original payment method within 5–7 working days.",
+      "No. Booking on the website costs nothing — you send us the trip and we confirm it. Payment is settled with our team directly, and the fare shown online is a minimum that covers the included kilometres; anything beyond that is billed at the per-km rate once the trip ends.",
   },
   {
     question: "Do you offer tempo traveller and Urbania rental in Kerala?",

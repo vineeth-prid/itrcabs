@@ -93,7 +93,7 @@ export function BookingConfirmation({ booking }: { booking: ConfirmationData }) 
             </h1>
             <p className="mt-2 text-cream/70">
               {booking.status === "CONFIRMED"
-                ? "Payment received — your vehicle is reserved."
+                ? "We have your booking — our team will confirm shortly."
                 : "Your booking is being confirmed."}
             </p>
 
@@ -156,17 +156,14 @@ export function BookingConfirmation({ booking }: { booking: ConfirmationData }) 
           <div className="mx-8 mb-8 rounded-2xl bg-cream p-6 sm:mx-10">
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
               <p className="text-graphite">
-                Paid now <strong className="ml-1 text-ink">{formatINR(booking.bookingAmount)}</strong>
-              </p>
-              <p className="text-graphite">
-                Estimated fare <strong className="ml-1 text-ink">{formatINR(booking.estimateTotal)}</strong>
+                Minimum fare <strong className="ml-1 text-ink">{formatINR(booking.estimateTotal)}</strong>
               </p>
               <p className="text-graphite">
                 Extra km <strong className="ml-1 text-ink">₹{booking.extraKmRate}/km</strong>
               </p>
             </div>
             <p className="mt-3 text-xs text-smoke">
-              Booking amount is adjusted in your final fare. Toll, parking and night charges (if any) at actuals.
+              Nothing to pay online. The fare above is a minimum covering the included kilometres — extra km, toll, parking and night charges (if any) are billed at actuals once the trip ends.
             </p>
           </div>
 

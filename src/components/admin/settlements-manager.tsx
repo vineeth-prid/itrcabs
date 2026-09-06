@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, RefreshCw, X } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Check, Loader2, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import type { BookingRecord } from "@/lib/booking-store";
-import type { VehicleSpec } from "@/config/fleet";
-import { computeRideFinance } from "@/lib/pricing";
+import { computeRideFinance, EXTRA_BILLING, type RideExtra } from "@/lib/pricing";
 import { formatINR, formatDate, cn } from "@/lib/utils";
 import { summarise, inRange, matches, byDriver, knownDrivers } from "@/lib/analytics";
 import { PageTitle, Panel, StatCard, Field, darkField } from "@/components/admin/ui";
 import { FilterBar, useDateRange, filterChip } from "@/components/admin/filter-bar";
-import { Input } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { useAdminBookings } from "@/components/admin/use-admin-bookings";
+import { useAdminFleet } from "@/components/admin/use-admin-fleet";
 
 /* A trip settles in three moves: assign a driver, record what actually
    happened (odometer and money taken), then pay the driver. The filters
@@ -60,6 +60,7 @@ function CloseOutDialog({
     (booking.collectedAmount ?? booking.bookingAmount).toString()
   );
   const [driverOverride, setDriverOverride] = useState(booking.driverAmount?.toString() ?? "");
+  const [extras, setExtras] = useState<RideExtra[]>(booking.extras ?? []);
   const [settled, setSettled] = useState(booking.driverSettled);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,15 +71,13 @@ function CloseOutDialog({
 
   /* The vehicle's driver rates make the preview exact: extra kilometres cost
      the driver too, so the payout moves with the odometer, not just the fare. */
-  const { data: vehicles = [] } = useQuery<(VehicleSpec & { available: boolean })[]>({
-    queryKey: ["admin-fleet"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/fleet");
-      if (!res.ok) throw new Error("Failed to load fleet");
-      return (await res.json()).vehicles;
-    },
-  });
-  const rates = vehicles.find((v) => v.slug === booking.vehicleSlug);
+  const { data: fleet } = useAdminFleet();
+  const rates = fleet?.vehicles.find((v) => v.slug === booking.vehicleSlug);
+
+  /* Blank rows are scratch space until they have a label and an amount. */
+  const cleanExtras = extras.filter((e) => e.label.trim() !== "" && Number(e.amount) > 0);
+  const setExtra = (i: number, patch: Partial<RideExtra>) =>
+    setExtras((list) => list.map((e, n) => (n === i ? { ...e, ...patch } : e)));
 
   const km = actualKm.trim();
   const preview = computeRideFinance(
@@ -87,6 +86,7 @@ function CloseOutDialog({
       actualKm: km === "" ? null : Number(km),
       driverAmount: driverOverride === "" ? null : Number(driverOverride),
       collectedAmount: collected === "" ? null : Number(collected),
+      extras: cleanExtras,
     },
     rates
   );
@@ -118,6 +118,7 @@ function CloseOutDialog({
         actualKm: km === "" ? null : Number(km),
         collectedAmount: collected === "" ? null : Number(collected),
         driverAmount: driverOverride === "" ? null : Number(driverOverride),
+        extras: cleanExtras,
         driverSettled: settled,
       });
       onSaved();
@@ -228,17 +229,91 @@ function CloseOutDialog({
           </div>
         </div>
 
+        <div className="mt-6">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-cream/40">
+              Tolls, parking & other costs
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setExtras((list) => [...list, { label: "", amount: 0, billing: "both" }])
+              }
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-bold text-cream/70 transition-colors hover:border-gold-500/40 hover:text-gold-300"
+            >
+              <Plus className="size-3.5" aria-hidden /> Add cost
+            </button>
+          </div>
+          {extras.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-xs text-cream/35">
+              Nothing extra on this trip. Add a toll, parking fee or permit and it lands on the
+              customer&rsquo;s bill, the driver&rsquo;s payout, or both.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {extras.map((e, i) => (
+                <li key={i} className="flex flex-wrap items-center gap-2">
+                  <Input
+                    value={e.label}
+                    onChange={(ev) => setExtra(i, { label: ev.target.value })}
+                    placeholder="Toll · parking · permit"
+                    aria-label={`Cost ${i + 1} description`}
+                    className={cn(darkField, "h-11 min-w-40 flex-1")}
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={e.amount || ""}
+                    onChange={(ev) => setExtra(i, { amount: Number(ev.target.value) })}
+                    placeholder="₹0"
+                    aria-label={`Cost ${i + 1} amount`}
+                    className={cn(darkField, "h-11 w-28")}
+                  />
+                  <Select
+                    value={e.billing}
+                    onChange={(ev) =>
+                      setExtra(i, { billing: ev.target.value as RideExtra["billing"] })
+                    }
+                    aria-label={`Cost ${i + 1} billing`}
+                    className={cn(darkField, "h-11 w-56")}
+                  >
+                    {EXTRA_BILLING.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <button
+                    type="button"
+                    onClick={() => setExtras((list) => list.filter((_, n) => n !== i))}
+                    aria-label={`Remove cost ${i + 1}`}
+                    className="rounded-lg border border-white/10 p-2.5 text-cream/50 transition-colors hover:border-red-500/40 hover:text-red-300"
+                  >
+                    <Trash2 className="size-4" aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <div className="mt-6 rounded-xl border border-white/8 bg-white/[0.03] p-4">
           <Row label="Minimum fare" value={formatINR(preview.minimumFare)} />
           <Row
             label={`Extra km (${preview.extraKm} × ₹${booking.extraKmRate})`}
             value={formatINR(preview.extraCharge)}
           />
+          {preview.extrasCustomer > 0 && (
+            <Row label="Tolls, parking & other" value={formatINR(preview.extrasCustomer)} />
+          )}
           <Row label="Customer total" value={formatINR(preview.customerTotal)} strong />
           <div className="my-2 border-t border-white/8" />
           <Row label="Collected" value={formatINR(preview.collected)} />
           <Row label="Balance to collect" value={formatINR(preview.balanceDue)} strong />
           <div className="my-2 border-t border-white/8" />
+          {preview.extrasDriver > 0 && (
+            <Row label="Reimbursed to driver" value={formatINR(preview.extrasDriver)} />
+          )}
           <Row label="Driver payout" value={formatINR(driverTotal)} />
           <div className="flex justify-between gap-4 py-1.5 text-sm">
             <span className="text-cream/50">Profit</span>

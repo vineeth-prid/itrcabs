@@ -12,7 +12,12 @@ export interface PricingBreakdown {
   notes: string[];
 }
 
-export const BOOKING_AMOUNT = 199;
+/**
+ * Nothing is collected on the website — a booking is an enquiry, and the team
+ * takes payment on their own terms. This stays as the starting "collected"
+ * figure on a new booking, which an admin edits at close-out.
+ */
+export const BOOKING_AMOUNT = 0;
 
 /**
  * Pricing engine — mirrors the admin-configurable PricingConfig defaults.
@@ -43,6 +48,7 @@ export function computePricing(
       `Additional km at ₹${vehicle.extraKmRate}/km`,
       "Parking & toll extra at actuals",
       "Night charges if applicable",
+      "No payment online — we confirm and collect directly",
     ],
   };
 }
@@ -60,12 +66,51 @@ export function computePricing(
    The customer pays our rate card, the driver is paid a lower one, and both
    run off the same actual kilometres — so the margin follows the trip. */
 
+/**
+ * A cost incurred on the trip that is not part of the rate card — a toll, a
+ * parking fee, an interstate permit, a night halt.
+ *
+ * `billing` says who it lands on:
+ *   both     — the customer is charged and the driver is reimbursed. The
+ *              default, and right for a toll the driver paid out of pocket:
+ *              it passes through and leaves the margin untouched.
+ *   customer — charged to the customer only, so it is ours to keep.
+ *   driver   — reimbursed to the driver only, so we absorb it.
+ */
+export interface RideExtra {
+  label: string;
+  amount: number;
+  billing: "both" | "customer" | "driver";
+}
+
+export const EXTRA_BILLING: { value: RideExtra["billing"]; label: string }[] = [
+  { value: "both", label: "Bill customer & pay driver" },
+  { value: "customer", label: "Bill customer only" },
+  { value: "driver", label: "Pay driver only" },
+];
+
+/** Splits a list of extras into what the customer owes and what the driver is owed. */
+export function splitExtras(extras: RideExtra[] = []) {
+  let customer = 0;
+  let driver = 0;
+  for (const e of extras) {
+    const amount = Number(e?.amount) || 0;
+    if (e?.billing !== "driver") customer += amount;
+    if (e?.billing !== "customer") driver += amount;
+  }
+  return { customer, driver };
+}
+
 export interface RideFinance {
   /** Kilometres covered by the minimum fare. */
   includedKm: number;
   /** Kilometres beyond the allowance — 0 while the trip is open. */
   extraKm: number;
   extraCharge: number;
+  /** Tolls, parking and the like, as charged to the customer. */
+  extrasCustomer: number;
+  /** The same list, as reimbursed to the driver. */
+  extrasDriver: number;
   /** The quoted floor: what the trip costs even if it never leaves the yard. */
   minimumFare: number;
   /** Minimum plus extra kilometres. Equals the minimum while open. */
@@ -94,6 +139,7 @@ export type FinanceBooking = {
   driverAmount?: number | null;
   /** Total taken from the customer so far; defaults to the deposit. */
   collectedAmount?: number | null;
+  extras?: RideExtra[] | null;
 };
 
 type DriverRates = Pick<
@@ -106,7 +152,8 @@ export function computeRideFinance(b: FinanceBooking, v?: DriverRates): RideFina
   const closed = b.actualKm != null;
   const extraKm = closed ? Math.max(0, b.actualKm! - b.includedKm) : 0;
   const extraCharge = extraKm * b.extraKmRate;
-  const customerTotal = b.estimateTotal + extraCharge;
+  const extras = splitExtras(b.extras ?? []);
+  const customerTotal = b.estimateTotal + extraCharge + extras.customer;
 
   /* Driver bata is the driver's allowance, so it passes straight through. */
   const driverBase = v
@@ -114,7 +161,10 @@ export function computeRideFinance(b: FinanceBooking, v?: DriverRates): RideFina
       ? v.driverBasePrice
       : (v.driverPerDayPrice + v.driverBata) * days
     : 0;
-  const driverTotal = b.driverAmount ?? driverBase + extraKm * (v?.driverExtraKmRate ?? 0);
+  /* An override replaces the rate-card payout, but reimbursements are still
+     owed on top — they are money the driver already spent. */
+  const driverRate = b.driverAmount ?? driverBase + extraKm * (v?.driverExtraKmRate ?? 0);
+  const driverTotal = driverRate + extras.driver;
 
   const collected = b.collectedAmount ?? b.bookingAmount;
   const profit = customerTotal - driverTotal;
@@ -123,6 +173,8 @@ export function computeRideFinance(b: FinanceBooking, v?: DriverRates): RideFina
     includedKm: b.includedKm,
     extraKm,
     extraCharge,
+    extrasCustomer: extras.customer,
+    extrasDriver: extras.driver,
     minimumFare: b.estimateTotal,
     customerTotal,
     driverTotal,

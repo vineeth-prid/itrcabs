@@ -163,6 +163,8 @@ model Booking {
   payment       Payment?
   driverName    String?
   driverVehicleNo String?
+  /** Toll, parking and similar line items — see RideExtra in lib/pricing. */
+  extras        Json?
   actualKm      Int?
   driverAmount  Int?
   collectedAmount Int?

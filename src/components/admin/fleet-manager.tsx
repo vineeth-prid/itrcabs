@@ -1,36 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
 import { PageTitle, Panel } from "@/components/admin/ui";
 import { VehicleIllustration } from "@/components/brand/vehicle-illustration";
 import { formatINR, cn } from "@/lib/utils";
-import type { Illustration } from "@/config/fleet";
-
-interface AdminVehicle {
-  slug: string;
-  name: string;
-  categoryLabel?: string;
-  category: string;
-  seats: number;
-  luggage: number;
-  basePrice: number;
-  perDayPrice: number;
-  extraKmRate: number;
-  driverBasePrice: number;
-  driverPerDayPrice: number;
-  driverExtraKmRate: number;
-  available: boolean;
-  illustration: Illustration;
-  examples: string;
-}
-
-async function fetchFleet(): Promise<{ vehicles: AdminVehicle[]; source: string }> {
-  const res = await fetch("/api/admin/fleet");
-  if (!res.ok) throw new Error("Failed to load fleet");
-  return res.json();
-}
+import { useAdminFleet, type AdminVehicle } from "@/components/admin/use-admin-fleet";
 
 function PriceField({
   label,
@@ -134,7 +110,8 @@ function PriceField({
 
 export function FleetManager() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ["admin-fleet"], queryFn: fetchFleet });
+  const { data, isLoading, error } = useAdminFleet();
+  const vehicles = data?.vehicles ?? [];
 
   const patch = useMutation({
     mutationFn: async (payload: { slug: string } & Partial<AdminVehicle>) => {
@@ -161,11 +138,17 @@ export function FleetManager() {
             : "Demo mode — edits persist for this server session"
         }
       />
-      {isLoading ? (
+      {error ? (
+        <Panel className="border-red-500/30 bg-red-500/10">
+          <p className="py-10 text-center text-sm text-red-300">
+            {error instanceof Error ? error.message : "Could not load the fleet."}
+          </p>
+        </Panel>
+      ) : isLoading ? (
         <Panel><p className="py-16 text-center text-sm text-cream/40">Loading fleet…</p></Panel>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {data?.vehicles.map((v) => {
+          {vehicles.map((v) => {
             const margin = v.basePrice - v.driverBasePrice;
             return (
             <Panel key={v.slug} className={cn("transition-opacity", !v.available && "opacity-55")}>
