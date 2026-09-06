@@ -166,6 +166,12 @@ model Booking {
   /** Toll, parking and similar line items — see RideExtra in lib/pricing. */
   extras        Json?
   actualKm      Int?
+  /** Per-ride overrides of the vehicle's driver rate card. Null = use the card. */
+  driverBaseFare Int?
+  driverKmRate  Int?
+  /** Cash already handed to the driver, deducted from what is still owed. */
+  driverAdvance Int?
+  /** Superseded by driverBaseFare/driverKmRate; kept so no data is dropped. */
   driverAmount  Int?
   collectedAmount Int?
   driverSettled Boolean       @default(false)

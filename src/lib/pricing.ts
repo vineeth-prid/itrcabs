@@ -101,24 +101,42 @@ export function splitExtras(extras: RideExtra[] = []) {
   return { customer, driver };
 }
 
+
+/**
+ * Both sides of a ride are built the same way, from rates that can be edited
+ * per trip:
+ *
+ *   base fare (covers the included km) + extra km × per-km rate + costs
+ *
+ * The customer is billed on their rate card, the driver is paid on theirs, and
+ * both run off the same odometer reading. What is left is the margin. Money
+ * already moved — collected from the customer, advanced to the driver — is
+ * subtracted at the end to give what is still outstanding on each side.
+ */
 export interface RideFinance {
-  /** Kilometres covered by the minimum fare. */
   includedKm: number;
   /** Kilometres beyond the allowance — 0 while the trip is open. */
   extraKm: number;
-  extraCharge: number;
-  /** Tolls, parking and the like, as charged to the customer. */
-  extrasCustomer: number;
-  /** The same list, as reimbursed to the driver. */
-  extrasDriver: number;
-  /** The quoted floor: what the trip costs even if it never leaves the yard. */
+
+  /* Customer side */
   minimumFare: number;
-  /** Minimum plus extra kilometres. Equals the minimum while open. */
+  extraCharge: number;
+  extrasCustomer: number;
   customerTotal: number;
-  driverTotal: number;
   collected: number;
-  /** Still to collect from the customer. Only meaningful once closed. */
+  /** Still to collect. Only meaningful once closed. */
   balanceDue: number;
+
+  /* Driver side */
+  driverBase: number;
+  driverKmRate: number;
+  driverExtra: number;
+  extrasDriver: number;
+  driverTotal: number;
+  driverAdvance: number;
+  /** Still to hand over after the advance. */
+  driverDue: number;
+
   profit: number;
   /** Profit as a percentage of the customer total. */
   margin: number;
@@ -135,11 +153,13 @@ export type FinanceBooking = {
   extraKmRate: number;
   bookingAmount: number;
   actualKm?: number | null;
-  /** Manual override of the driver payout — wins over the rate card. */
-  driverAmount?: number | null;
   /** Total taken from the customer so far; defaults to the deposit. */
   collectedAmount?: number | null;
   extras?: RideExtra[] | null;
+  /** Per-ride overrides of the vehicle's driver rate card. */
+  driverBaseFare?: number | null;
+  driverKmRate?: number | null;
+  driverAdvance?: number | null;
 };
 
 type DriverRates = Pick<
@@ -147,40 +167,54 @@ type DriverRates = Pick<
   "driverBasePrice" | "driverPerDayPrice" | "driverExtraKmRate" | "driverBata"
 >;
 
-export function computeRideFinance(b: FinanceBooking, v?: DriverRates): RideFinance {
+/** What the rate card says this driver earns before any per-ride override. */
+export function driverRateCard(b: Pick<FinanceBooking, "tripType" | "days">, v?: DriverRates) {
   const days = b.tripType === "ONE_DAY" ? 1 : Math.max(2, b.days);
+  /* Driver bata is the driver's allowance, so it passes straight through. */
+  return {
+    base: v ? (b.tripType === "ONE_DAY" ? v.driverBasePrice : (v.driverPerDayPrice + v.driverBata) * days) : 0,
+    kmRate: v?.driverExtraKmRate ?? 0,
+  };
+}
+
+export function computeRideFinance(b: FinanceBooking, v?: DriverRates): RideFinance {
   const closed = b.actualKm != null;
   const extraKm = closed ? Math.max(0, b.actualKm! - b.includedKm) : 0;
-  const extraCharge = extraKm * b.extraKmRate;
   const extras = splitExtras(b.extras ?? []);
+
+  const extraCharge = extraKm * b.extraKmRate;
   const customerTotal = b.estimateTotal + extraCharge + extras.customer;
-
-  /* Driver bata is the driver's allowance, so it passes straight through. */
-  const driverBase = v
-    ? b.tripType === "ONE_DAY"
-      ? v.driverBasePrice
-      : (v.driverPerDayPrice + v.driverBata) * days
-    : 0;
-  /* An override replaces the rate-card payout, but reimbursements are still
-     owed on top — they are money the driver already spent. */
-  const driverRate = b.driverAmount ?? driverBase + extraKm * (v?.driverExtraKmRate ?? 0);
-  const driverTotal = driverRate + extras.driver;
-
   const collected = b.collectedAmount ?? b.bookingAmount;
+
+  const card = driverRateCard(b, v);
+  const driverBase = b.driverBaseFare ?? card.base;
+  const driverKmRate = b.driverKmRate ?? card.kmRate;
+  const driverExtra = extraKm * driverKmRate;
+  const driverTotal = driverBase + driverExtra + extras.driver;
+  const driverAdvance = b.driverAdvance ?? 0;
+
   const profit = customerTotal - driverTotal;
 
   return {
     includedKm: b.includedKm,
     extraKm,
+
+    minimumFare: b.estimateTotal,
     extraCharge,
     extrasCustomer: extras.customer,
-    extrasDriver: extras.driver,
-    minimumFare: b.estimateTotal,
     customerTotal,
-    driverTotal,
     collected,
     /* An open trip has no final bill, so nothing is "due" yet. */
     balanceDue: closed ? Math.max(0, customerTotal - collected) : 0,
+
+    driverBase,
+    driverKmRate,
+    driverExtra,
+    extrasDriver: extras.driver,
+    driverTotal,
+    driverAdvance,
+    driverDue: Math.max(0, driverTotal - driverAdvance),
+
     profit,
     margin: customerTotal ? Math.round((profit / customerTotal) * 100) : 0,
     closed,

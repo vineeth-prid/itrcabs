@@ -38,8 +38,9 @@ export interface Totals {
   /** Owed by customers on closed trips. */
   balanceDue: number;
 
-  /** Closed, driver not paid yet. */
+  /** Closed, driver not fully paid yet. */
   unsettledCount: number;
+  /** Still to hand over on those trips, after any advance. */
   unsettledAmount: number;
   /** Ran but never closed out — blocks settlement. */
   awaitingCloseout: number;
@@ -84,7 +85,8 @@ export function summarise(bookings: BookingRecord[]): Totals {
     balanceDue: sumBy(closed, (b) => b.finance.balanceDue),
 
     unsettledCount: unsettled.length,
-    unsettledAmount: sumBy(unsettled, (b) => b.finance.driverTotal),
+    /* What is still to hand over — an advance is already out the door. */
+    unsettledAmount: sumBy(unsettled, (b) => b.finance.driverDue),
     awaitingCloseout: open.filter((b) => b.status === "COMPLETED").length,
     unassigned: closed.filter((b) => !b.driverName).length,
   };
@@ -176,8 +178,10 @@ export function byDriver(bookings: BookingRecord[]): DriverTotals[] {
     if (b.driverVehicleNo) d.vehicleNo = b.driverVehicleNo;
     if (b.finance.closed) {
       d.earned += b.finance.driverTotal;
-      if (b.driverSettled) d.paid += b.finance.driverTotal;
-      else d.due += b.finance.driverTotal;
+      /* An advance is money already paid, whether or not the trip is settled. */
+      d.paid += b.finance.driverAdvance;
+      if (b.driverSettled) d.paid += b.finance.driverDue;
+      else d.due += b.finance.driverDue;
     } else {
       d.awaitingCloseout += 1;
     }

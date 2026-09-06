@@ -104,15 +104,52 @@ async function main() {
     "clearing the costs restores the margin"
   );
 
-  // A manual payout wins over the rate card.
-  await updateBooking(a.id, { driverAmount: 4000 });
-  assert.equal((await getBooking(a.id))?.finance.driverTotal, 4000);
-  assert.equal((await getBooking(a.id))?.finance.profit, 150);
+  /* The worked example the business settles by:
+       332 km run, 80 km covered by a ₹1,800 driver base, 252 km × ₹18 = ₹4,536,
+       plus a ₹210 toll the driver paid = ₹6,546. Less a ₹1,000 advance already
+       handed over leaves ₹5,546 to pay. */
+  const worked = await createBooking({
+    ...base,
+    phone: "9700000042",
+    estimateTotal: 2500,
+    includedKm: 80,
+    extraKmRate: 22,
+  });
+  await updateBooking(worked.id, {
+    actualKm: 332,
+    driverBaseFare: 1800,
+    driverKmRate: 18,
+    driverAdvance: 1000,
+    collectedAmount: 2000,
+    extras: [{ label: "Toll", amount: 210, billing: "both" }],
+  });
+  const w = (await getBooking(worked.id))!.finance;
+  assert.equal(w.extraKm, 252, "332 km less the 80 km allowance");
+  assert.equal(w.driverBase, 1800);
+  assert.equal(w.driverExtra, 252 * 18);
+  assert.equal(w.driverExtra, 4536);
+  assert.equal(w.extrasDriver, 210, "the toll is reimbursed to the driver");
+  assert.equal(w.driverTotal, 6546, "1800 + 4536 + 210");
+  assert.equal(w.driverAdvance, 1000);
+  assert.equal(w.driverDue, 5546, "6546 less the 1000 advance");
+  /* The customer is billed the same shape on their own rates. */
+  assert.equal(w.extraCharge, 252 * 22);
+  assert.equal(w.extrasCustomer, 210);
+  assert.equal(w.customerTotal, 2500 + 5544 + 210);
+  assert.equal(w.balanceDue, w.customerTotal - 2000);
+  assert.equal(w.profit, w.customerTotal - 6546);
 
-  // An override replaces the rate card, but not money the driver already spent.
-  await updateBooking(a.id, { extras: [{ label: "Toll", amount: 250, billing: "driver" }] });
-  assert.equal((await getBooking(a.id))?.finance.driverTotal, 4250);
-  await updateBooking(a.id, { extras: [] });
+  // An advance is a timing difference, so it never moves the margin.
+  await updateBooking(worked.id, { driverAdvance: 0 });
+  const noAdvance = (await getBooking(worked.id))!.finance;
+  assert.equal(noAdvance.profit, w.profit);
+  assert.equal(noAdvance.driverDue, 6546);
+
+  // Clearing an override falls back to the vehicle's rate card.
+  await updateBooking(worked.id, { driverBaseFare: null, driverKmRate: null });
+  const carded = (await getBooking(worked.id))!.finance;
+  assert.equal(carded.driverBase, sedan.driverBasePrice);
+  assert.equal(carded.driverKmRate, sedan.driverExtraKmRate);
 
   // Settling stamps a date; un-settling clears it.
   await updateBooking(a.id, { driverSettled: true });
@@ -139,7 +176,7 @@ async function main() {
   assert.equal(totals.cancelled, 1);
   assert.equal(totals.closedTrips, 1);
   assert.equal(totals.grossFare, closed.finance.customerTotal, "cancelled fare is excluded");
-  assert.equal(totals.profit, 150);
+  assert.equal(totals.profit, closed.finance.profit, "cancelled trips contribute nothing");
 
   /* Per-driver settlement: only closed trips are payable, and an unsettled one
      shows as still owed. */
@@ -155,13 +192,13 @@ async function main() {
   assert.equal(sunil.vehicleNo, "KL 07 AB 1234");
   assert.equal(sunil.trips, 2);
   assert.equal(sunil.awaitingCloseout, 1, "the open trip is not payable yet");
-  assert.equal(sunil.earned, 4000);
-  assert.equal(sunil.due, 4000, "unsettled, so still owed");
+  assert.equal(sunil.earned, closed.finance.driverTotal);
+  assert.equal(sunil.due, closed.finance.driverTotal, "unsettled, so still owed");
   assert.equal(sunil.paid, 0);
 
   await updateBooking(a.id, { driverSettled: true });
   const afterPay = byDriver([(await getBooking(a.id))!])[0];
-  assert.equal(afterPay.paid, 4000);
+  assert.equal(afterPay.paid, closed.finance.driverTotal);
   assert.equal(afterPay.due, 0);
 
   assert.deepEqual(knownDrivers([(await getBooking(a.id))!]), [

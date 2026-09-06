@@ -67,7 +67,9 @@ const patchSchema = z.object(fields).partial().extend({
     .max(20)
     .optional(),
   actualKm: z.number().int().min(0).max(20000).nullable().optional(),
-  driverAmount: nullableMoney.optional(),
+  driverBaseFare: nullableMoney.optional(),
+  driverKmRate: z.number().int().min(0).max(500).nullable().optional(),
+  driverAdvance: nullableMoney.optional(),
   collectedAmount: nullableMoney.optional(),
   driverSettled: z.boolean().optional(),
 });

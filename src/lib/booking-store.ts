@@ -31,8 +31,11 @@ export interface BookingSettlement {
   extras?: RideExtra[] | null;
   /** Kilometres actually run. Null until the trip closes. */
   actualKm?: number | null;
-  /** Manual override of the driver payout; null falls back to the rate card. */
-  driverAmount?: number | null;
+  /** Per-ride overrides of the vehicle driver rate card; null uses the card. */
+  driverBaseFare?: number | null;
+  driverKmRate?: number | null;
+  /** Cash already handed to the driver, deducted from what is still owed. */
+  driverAdvance?: number | null;
   /** Total taken from the customer so far; null means only the deposit. */
   collectedAmount?: number | null;
   driverSettled: boolean;
@@ -161,7 +164,9 @@ type BookingRow = {
   driverVehicleNo: string | null;
   extras: unknown;
   actualKm: number | null;
-  driverAmount: number | null;
+  driverBaseFare: number | null;
+  driverKmRate: number | null;
+  driverAdvance: number | null;
   collectedAmount: number | null;
   driverSettled: boolean;
   settledAt: Date | null;
@@ -196,7 +201,9 @@ function fromRow(b: BookingRow): BookingRecord {
       /* Stored as JSON, so guard the shape before anything sums it. */
       extras: Array.isArray(b.extras) ? (b.extras as RideExtra[]) : [],
       actualKm: b.actualKm,
-      driverAmount: b.driverAmount,
+      driverBaseFare: b.driverBaseFare,
+      driverKmRate: b.driverKmRate,
+      driverAdvance: b.driverAdvance,
       collectedAmount: b.collectedAmount,
       driverSettled: b.driverSettled,
       settledAt: b.settledAt?.toISOString() ?? null,
@@ -267,7 +274,9 @@ export interface BookingPatch {
   driverVehicleNo?: string | null;
   extras?: RideExtra[] | null;
   actualKm?: number | null;
-  driverAmount?: number | null;
+  driverBaseFare?: number | null;
+  driverKmRate?: number | null;
+  driverAdvance?: number | null;
   collectedAmount?: number | null;
   driverSettled?: boolean;
 }
