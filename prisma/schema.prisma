@@ -69,6 +69,8 @@ model Vehicle {
   driverPerDayPrice Int         @default(0)
   driverExtraKmRate Int         @default(0)
   illustration  String          @default("sedan")
+  /** Admin-set photo; falls back to the vector illustration when empty. */
+  imageUrl      String?
   features      String[]
   examples      String          @default("")
   images        VehicleImage[]

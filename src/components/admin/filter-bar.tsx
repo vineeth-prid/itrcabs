@@ -65,8 +65,10 @@ const chip = (active: boolean) =>
     active ? "bg-gradient-gold text-ink" : "bg-white/5 text-cream/50 hover:text-white"
   );
 
+/* dark-select carries color-scheme: dark, which the native date picker and
+   its calendar icon need to stay legible on this surface. */
 const dateInput =
-  "rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-cream/80 focus:border-gold-500 focus:outline-none";
+  "dark-select rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-cream/80 focus:border-gold-500 focus:outline-none";
 
 /** Filters sit in one row above everything they affect. */
 export function FilterBar({

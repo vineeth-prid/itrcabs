@@ -66,7 +66,7 @@ export function BookingWizard() {
 
   /* Live fleet — reflects admin pricing edits and availability instantly */
   const { data: liveFleet = [], isLoading: fleetLoading } = useQuery<
-    (VehicleSpec & { available: boolean })[]
+    (VehicleSpec & { available: boolean; imageUrl?: string })[]
   >({
     queryKey: ["public-fleet"],
     queryFn: async () => {
@@ -287,7 +287,12 @@ export function BookingWizard() {
                         )}
                         {v.popular && <Badge className="absolute left-4 top-4 z-10">Most booked</Badge>}
                         <div className="pt-4">
-                          <VehicleVisual slug={v.slug} illustration={v.illustration} name={v.name} />
+                          <VehicleVisual
+                            slug={v.slug}
+                            illustration={v.illustration}
+                            name={v.name}
+                            imageUrl={v.imageUrl}
+                          />
                         </div>
                         <h3 className="mt-3 font-display text-lg font-bold text-ink">{v.name}</h3>
                         <p className="text-xs text-smoke">{v.examples}</p>

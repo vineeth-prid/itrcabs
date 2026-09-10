@@ -5,6 +5,10 @@ import type { VehicleSpec } from "@/config/fleet";
 
 export interface AdminVehicle extends VehicleSpec {
   available: boolean;
+  /** Admin-set photo; empty falls back to the vector illustration. */
+  imageUrl?: string;
+  /** True for vehicles added here rather than shipped in config. */
+  custom: boolean;
 }
 
 export interface AdminFleet {

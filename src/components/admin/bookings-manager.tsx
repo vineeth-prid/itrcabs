@@ -211,7 +211,7 @@ export function BookingsManager() {
                         onChange={(e) => mutation.mutate({ id: b.id, status: e.target.value as BookingRecord["status"] })}
                         disabled={mutation.isPending}
                         aria-label={`Change status of ${b.bookingCode}`}
-                        className="rounded-lg border border-white/10 bg-ink px-3 py-1.5 text-xs font-bold text-cream/80 focus:border-gold-500 focus:outline-none"
+                        className="dark-select rounded-lg border border-white/10 bg-ink px-3 py-1.5 text-xs font-bold text-cream/80 focus:border-gold-500 focus:outline-none"
                       >
                         {["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"].map((s) => (
                           <option key={s} value={s}>{s}</option>

@@ -8,7 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ONE_DAY_INCLUDED_KM } from "@/config/fleet";
 
-export function VehicleCard({ vehicle, ctaHref }: { vehicle: VehicleSpec; ctaHref?: string }) {
+export function VehicleCard({
+  vehicle,
+  ctaHref,
+}: {
+  vehicle: VehicleSpec & { imageUrl?: string };
+  ctaHref?: string;
+}) {
   const href = ctaHref ?? `/book?vehicle=${vehicle.slug}`;
   return (
     <TiltCard className="h-full rounded-3xl">
@@ -23,6 +29,7 @@ export function VehicleCard({ vehicle, ctaHref }: { vehicle: VehicleSpec; ctaHre
               slug={vehicle.slug}
               illustration={vehicle.illustration}
               name={vehicle.name}
+              imageUrl={vehicle.imageUrl}
             />
           </div>
         </div>

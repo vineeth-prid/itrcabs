@@ -64,8 +64,18 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 /** Shared input skin for the dark admin surfaces. */
+/**
+ * Shared input skin for the dark admin surfaces.
+ *
+ * The colour-scheme declaration is what makes a <select> usable here. Options
+ * in a native dropdown are painted by the browser, not by our CSS, so the
+ * popup stayed white while inheriting our white text — every option was
+ * invisible until you clicked one. Declaring the scheme makes the browser
+ * paint the popup dark to match; the option rule in globals.css pins the
+ * colours for browsers that ignore it.
+ */
 export const darkField =
-  "border-white/10 bg-white/5 text-white placeholder:text-white/25 hover:border-white/20";
+  "dark-select border-white/10 bg-white/5 text-white placeholder:text-white/25 hover:border-white/20";
 
 export function Field({
   label,

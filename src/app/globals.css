@@ -155,3 +155,16 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Dark admin fields. A native dropdown's options are painted by the browser,
+   so on these surfaces the popup stayed white while inheriting our light
+   text and every option was invisible. color-scheme covers the modern
+   browsers; the explicit option colours cover the rest. */
+.dark-select {
+  color-scheme: dark;
+}
+.dark-select option,
+.dark-select optgroup {
+  background-color: #16161a;
+  color: #f5f1e8;
+}
