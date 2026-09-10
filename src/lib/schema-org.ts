@@ -57,6 +57,7 @@ export function businessSchema() {
     priceRange: "₹₹",
     currenciesAccepted: "INR",
     paymentAccepted: "Cash, UPI, Credit Card, Debit Card",
+    foundingDate: siteConfig.founded,
     parentOrganization: {
       "@type": "Organization",
       name: siteConfig.parentOrganization,

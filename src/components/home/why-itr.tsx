@@ -37,7 +37,7 @@ const features = [
   {
     icon: HeartHandshake,
     title: "Kerala-hearted service",
-    text: "A responsive support team in Kakkanad that treats every guest like family — the ITR way since 1995.",
+    text: "A responsive support team in Kakkanad that treats every guest like family — the ITR way since 2015.",
   },
 ];
 

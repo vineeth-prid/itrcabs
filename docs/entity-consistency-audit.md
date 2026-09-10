@@ -4,7 +4,7 @@ Audit of how the business identifies itself across this codebase, and where
 that conflicts with the canonical identity. **This file is documentation only.**
 It changes nothing at runtime and is not linked from the site.
 
-Last reviewed: 2026-09-11 — business figures and address verified.
+Last reviewed: 2026-09-12 — figures, address, founding year and Google profile all confirmed. No open items.
 
 ---
 
@@ -26,6 +26,8 @@ business has confirmed it.
 | Hours | Open 24 hours, 7 days a week |
 | Instagram | https://www.instagram.com/itr_cabss/ |
 | Google reviews | 4.7 from 87 reviews (verified) |
+| Founded | 2015 (ITR Cabs) |
+| Google Business Profile | https://share.google/Zhpy28csLdEjiiobI |
 
 **Naming rule.** The taxi business is *ITR Cabs* everywhere. *ITR Groups* is
 the parent business and appears only where that relationship is the point —
@@ -93,12 +95,10 @@ implied the same listing.
 **Corrected:** both are driven by `siteConfig.social.googleBusinessProfile`,
 now populated with the URL the business supplied.
 
-> **That URL is a Google *search* link, not a Business Profile link.** It is
-> `google.com/search?q=itr+cabs&…` with Chrome session parameters attached. It
-> works for sending a visitor to the reviews, so the visible links use it
-> unchanged — but it is excluded from `sameAs`, where a results page is not an
-> entity. Replacing it with the profile's own **Share** link would put it in
-> both places. See "Three things to keep an eye on" below.
+An interim value — a `google.com/search?q=itr+cabs&…` results URL — was used
+for the visible links only and kept out of `sameAs`. The business has since
+supplied the profile's own Share link, `https://share.google/Zhpy28csLdEjiiobI`,
+which represents the listing itself and is therefore published in `sameAs` too.
 
 ### 4. Invented social profiles
 
@@ -160,7 +160,7 @@ is one of these, and each label states exactly what it counts.
 | Google reviews | 87 | Testimonials card, footer |
 | Journeys completed | 7,000+ | Homepage stats |
 | Fleet size | 20 vehicles | Homepage stats |
-| Years on the road | 10+ | Homepage stats, trust bar |
+| Years on the road | 10+ (founded 2015) | Homepage stats, trust bar |
 | On-time pickups | 99% | Homepage stats |
 
 These replaced the earlier unverified set: 4.9 with 1,280+ reviews, 120,000+
@@ -171,42 +171,52 @@ are still **not** emitted as `aggregateRating`. They are Google's data about the
 business, not reviews collected on this site, and Google's structured-data
 policy does not allow a site to mark up third-party reviews as its own.
 
-### Three things to keep an eye on
+### Previously open, now resolved
 
-**1. "10+ years" versus "since 1995".** The verified figure for ITR Cabs is 10+
-years, but several places still describe ITR as beginning in 1995. They read
-naturally as **ITR Groups**, the parent business, and were left alone on that
-basis. If any is meant to describe *ITR Cabs*, it contradicts the verified
-figure and should be reworded.
+**1. Founding year — resolved: ITR Cabs began in 2015.**
 
-| Location | Wording |
-|---|---|
-| `app/(site)/about/page.tsx` | "ITR began in 1995…", "Three decades later…" |
-| `components/about/about-timeline.tsx` | Timeline opening at 1995 |
-| `components/home/why-itr.tsx` | "the ITR way since 1995" |
-| `components/layout/footer.tsx` | "three decades of trust" |
+The site described ITR as starting in 1995 with "three decades" of history,
+which contradicted the verified "10+ years". The business confirmed **2015**,
+so the history was re-dated rather than left ambiguous:
 
-`foundingDate` is no longer published in structured data: 1995 is ITR Groups'
-year, and ITR Cabs' own founding year has not been confirmed.
+| Location | Was | Now |
+|---|---|---|
+| `app/(site)/about/page.tsx` | "ITR began in 1995…", "Thirty years on the road", "Three decades later" | 2015, "A decade on the road", "A decade on" |
+| `components/about/about-timeline.tsx` | Eras 1995 → 2020s | Opens at 2015; later chapters use period labels rather than invented years |
+| `components/home/why-itr.tsx` | "the ITR way since 1995" | "since 2015" |
+| `components/layout/footer.tsx` | "three decades of trust" | "a decade of trust" |
 
-**2. Postal code, locality and map pin.** The street line is now the verified
-address, but PIN **682030** and locality **Kakkanad** carried over from the
-previous configuration and were not restated. Confirm that Kuzhikattumoola
-Junction falls within Kakkanad and that PIN. The contact-page map embed uses
-coordinates 10.0158, 76.3419, also not re-verified — worth checking the pin
-lands on the right building.
+The seven timeline chapters and their copy are otherwise unchanged — only the
+dates moved. No new events were invented to fill the shorter span; the middle
+chapters carry descriptive labels ("Growing the fleet", "Corporate transport",
+"Airports & tourism", "Going digital") instead of years the business has not
+given.
 
-**3. The Google URL is a search link, not a profile.** The URL supplied is a
-Chrome `google.com/search?q=itr+cabs&…` results page carrying browser session
-parameters (`gs_lcrp`, `sourceid=chrome`, `source=chrome.ob`). It works for
-sending a visitor to the reviews, so the visible links use it unchanged. It is
-deliberately **excluded from `sameAs`**: that property is for pages which
-*represent* the business, and a results page is not one — publishing it as an
-identity claim would weaken the entity rather than strengthen it.
+`foundingDate: 2015` is published in structured data again, on the ITR Cabs
+entity. ITR Groups remains the `parentOrganization`; no founding year is
+claimed for it.
 
-To get both, open the Google Business Profile → **Share** → copy that link
-(it looks like `g.page/…`, `maps.app.goo.gl/…` or `share.google/…`) into
-`siteConfig.social.googleBusinessProfile`. It will join `sameAs` automatically.
+**2. Address — resolved.** The business confirmed Kuzhikattumoola Junction
+falls inside the Kakkanad PIN, so locality **Kakkanad** and PIN **682030** are
+correct alongside the verified street line.
+
+> Still worth a glance one day: the contact-page map embed uses coordinates
+> 10.0158, 76.3419, which pre-date the address change. They put the pin in
+> Kakkanad, but not necessarily on the building. Not a data-accuracy problem —
+> the address itself is right — so it is noted rather than flagged.
+
+**3. Google Business Profile — resolved.** The business supplied the profile's
+own Share link, `https://share.google/Zhpy28csLdEjiiobI` (verified live). It
+replaces the earlier `google.com/search?q=itr+cabs&…` results URL, and because
+it represents the listing rather than a search for it, it is now published in
+`sameAs` as well as on the visible review links — the direct website ↔ Google
+entity connection.
+
+The search-URL filter in `schema-org.ts` stays as a guard, so pasting a search
+link into that config field in future keeps it out of `sameAs` automatically.
+
+**4. `admin@itrcabs.com`** in the admin demo credentials is internal, not a
+public entity signal, and is intentionally left as-is.
 
 ---
 

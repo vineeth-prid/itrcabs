@@ -49,7 +49,7 @@ export function Footer() {
           <Logo dark />
           <p className="mt-5 max-w-xs text-sm leading-relaxed text-cream/60">
             Kerala&rsquo;s premium cab & travel company — GPS-tracked fleet, verified
-            chauffeurs and three decades of trust, from Kakkanad to every corner
+            chauffeurs and a decade of trust, from Kakkanad to every corner
             of God&rsquo;s Own Country.
           </p>
           <div className="mt-6 space-y-3 text-sm">

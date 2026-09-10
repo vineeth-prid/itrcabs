@@ -11,9 +11,9 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbSchema, webPageSchema } from "@/lib/schema-org";
 
 export const metadata: Metadata = {
-  title: "About ITR Cabs — 30 Years of Trust on Kerala's Roads",
+  title: "About ITR Cabs — A Decade on Kerala's Roads",
   description:
-    "The ITR story: from a single humble venture in 1995 to Kerala's most trusted premium cab company — GPS-enabled fleet, professional operations and customers across the state. Service at your doorstep.",
+    "The ITR Cabs story: from a single vehicle in 2015 to a trusted Kerala cab and travel company — GPS-enabled fleet, professional operations and customers across the state. Service at your doorstep.",
   alternates: { canonical: "/about" },
   openGraph: pageOpenGraph("/about"),
 };
@@ -31,9 +31,9 @@ export default function AboutPage() {
       <JsonLd schema={breadcrumbSchema([{ name: "Home", href: "/" }, { name: "About", href: "/about" }])} />
       <PageHero
         eyebrow="Our Story"
-        title="Thirty years on the road,"
+        title="A decade on the road,"
         accent="one promise kept."
-        description="ITR began in 1995 with a single humble venture and a stubborn belief: treat every customer like family and the road will rise to meet you. Three decades later, that belief drives one of Kerala's most trusted travel companies."
+        description="ITR Cabs began in 2015 with a single humble venture and a stubborn belief: treat every customer like family and the road will rise to meet you. A decade on, that belief drives a trusted Kerala travel company."
       />
 
       <AboutTimeline />

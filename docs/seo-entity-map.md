@@ -3,7 +3,7 @@
 How ITR Cabs is described to search engines and AI crawlers, and where each
 piece is defined. **Documentation only** — nothing here is rendered.
 
-Last reviewed: 2026-09-11.
+Last reviewed: 2026-09-12.
 
 ---
 
@@ -23,8 +23,8 @@ Last reviewed: 2026-09-11.
   Instagram             Tempo traveller      Thrikkakara
   @itr_cabss            Urbania rental       Kochi
         │               Outstation trips     Ernakulam
-  Google reviews        Wedding / events     Cochin Intl Airport
-  4.7 from 87           Kerala tour packages Kerala (outstation)
+  Google Business       Wedding / events     Cochin Intl Airport
+  Profile (4.7 / 87)    Kerala tour packages Kerala (outstation)
         │
   Facebook   ─┐
   YouTube     ├─ not yet confirmed; add to siteConfig.social when known
