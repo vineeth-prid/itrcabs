@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageOpenGraph } from "@/lib/seo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Phone, ArrowRight } from "lucide-react";
@@ -9,7 +10,7 @@ import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
 import { VehicleCard } from "@/components/fleet/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { JsonLd } from "@/components/seo/json-ld";
-import { breadcrumbSchema, serviceSchema } from "@/lib/schema-org";
+import { breadcrumbSchema, serviceSchema, webPageSchema } from "@/lib/schema-org";
 import { siteConfig } from "@/config/site";
 
 export function generateStaticParams() {
@@ -31,7 +32,10 @@ export async function generateMetadata({
     title: service.seoTitle,
     description: service.seoDescription,
     alternates: { canonical: `/services/${service.slug}` },
-    openGraph: { title: service.seoTitle, description: service.seoDescription },
+    openGraph: pageOpenGraph(`/services/${service.slug}`, {
+      title: service.seoTitle,
+      description: service.seoDescription,
+    }),
   };
 }
 
@@ -55,6 +59,14 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
           { name: "Services", href: "/services" },
           { name: service.name, href: `/services/${service.slug}` },
         ])}
+      />
+      <JsonLd
+        schema={webPageSchema({
+          path: `/services/${service.slug}`,
+          name: service.seoTitle,
+          description: service.seoDescription,
+          type: "ItemPage",
+        })}
       />
       <JsonLd schema={serviceSchema({ name: service.name, description: service.seoDescription, slug: service.slug })} />
 

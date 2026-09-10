@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { pageOpenGraph } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowUpRight, Clock, Route } from "lucide-react";
 import { destinations } from "@/config/destinations";
 import { PageHero } from "@/components/page-hero";
 import { Stagger, StaggerItem } from "@/components/motion/reveal";
 import { JsonLd } from "@/components/seo/json-ld";
-import { breadcrumbSchema } from "@/lib/schema-org";
+import { breadcrumbSchema, webPageSchema } from "@/lib/schema-org";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -13,11 +14,19 @@ export const metadata: Metadata = {
   description:
     "Taxi packages from Kochi to Kerala's finest destinations: Munnar, Alleppey, Wayanad, Thekkady, Vagamon, Athirappilly, Kumarakom and Kochi city tours. Dedicated cars, expert drivers, transparent pricing.",
   alternates: { canonical: "/destinations" },
+  openGraph: pageOpenGraph("/destinations"),
 };
 
 export default function DestinationsPage() {
   return (
     <>
+      <JsonLd
+        schema={webPageSchema({
+          path: "/destinations",
+          name: "Kerala destinations",
+          type: "CollectionPage",
+        })}
+      />
       <JsonLd schema={breadcrumbSchema([{ name: "Home", href: "/" }, { name: "Destinations", href: "/destinations" }])} />
       <PageHero
         eyebrow="Destinations"

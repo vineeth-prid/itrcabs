@@ -366,7 +366,7 @@ function HeroHeadline() {
         className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-white backdrop-blur-md"
       >
         <Star className="size-3.5 fill-gold-400 text-gold-400" aria-hidden />
-        Rated {siteConfig.googleRating.value} · {siteConfig.googleRating.count.toLocaleString("en-IN")}+ Kerala journeys
+        Chauffeur-driven across Kerala · Available 24×7
       </motion.div>
 
       <h1 className="mx-auto max-w-4xl font-display text-5xl font-bold leading-[1.04] tracking-tight text-white sm:text-6xl md:text-7xl">

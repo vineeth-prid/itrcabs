@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Sora, Manrope, Instrument_Serif } from "next/font/google";
 import { siteConfig } from "@/config/site";
-import { organizationSchema, localBusinessSchema } from "@/lib/schema-org";
-import { JsonLd } from "@/components/seo/json-ld";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -29,7 +27,7 @@ const instrumentSerif = Instrument_Serif({
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: `${siteConfig.name} — Premium Taxi & Cab Service in Kochi, Ernakulam`,
+    default: `${siteConfig.name} — Taxi Service in Kakkanad, Kochi & Ernakulam`,
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
@@ -42,13 +40,13 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: siteConfig.url,
     siteName: siteConfig.name,
-    title: `${siteConfig.name} — Premium Taxi & Cab Service in Kochi, Ernakulam`,
+    title: `${siteConfig.name} — Taxi Service in Kakkanad, Kochi & Ernakulam`,
     description: siteConfig.description,
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: `${siteConfig.name} — Kerala's premium cab service` }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: `${siteConfig.name} — chauffeur-driven taxi service in Kakkanad, Kochi` }],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteConfig.name} — Premium Taxi & Cab Service in Kochi`,
+    title: `${siteConfig.name} — Taxi Service in Kakkanad & Kochi`,
     description: siteConfig.description,
     images: ["/og.png"],
   },
@@ -73,8 +71,9 @@ export default function RootLayout({
       {/* Browser extensions inject attributes into body before React hydrates;
           without this that shows up in production as a hydration error. */}
       <body suppressHydrationWarning>
-        <JsonLd schema={organizationSchema()} />
-        <JsonLd schema={localBusinessSchema()} />
+        {/* Business structured data lives on the public site layout, not here:
+            emitting it from the root put a LocalBusiness on the admin panel
+            too, which is not public content. */}
         <Providers>{children}</Providers>
       </body>
     </html>

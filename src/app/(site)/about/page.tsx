@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageOpenGraph } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
@@ -7,18 +8,26 @@ import { AboutTimeline } from "@/components/about/about-timeline";
 import { StatsSection } from "@/components/home/stats-section";
 import { Button } from "@/components/ui/button";
 import { JsonLd } from "@/components/seo/json-ld";
-import { breadcrumbSchema } from "@/lib/schema-org";
+import { breadcrumbSchema, webPageSchema } from "@/lib/schema-org";
 
 export const metadata: Metadata = {
   title: "About ITR Cabs — 30 Years of Trust on Kerala's Roads",
   description:
     "The ITR story: from a single humble venture in 1995 to Kerala's most trusted premium cab company — GPS-enabled fleet, professional operations and customers across the state. Service at your doorstep.",
   alternates: { canonical: "/about" },
+  openGraph: pageOpenGraph("/about"),
 };
 
 export default function AboutPage() {
   return (
     <>
+      <JsonLd
+        schema={webPageSchema({
+          path: "/about",
+          name: "About ITR Cabs",
+          type: "AboutPage",
+        })}
+      />
       <JsonLd schema={breadcrumbSchema([{ name: "Home", href: "/" }, { name: "About", href: "/about" }])} />
       <PageHero
         eyebrow="Our Story"

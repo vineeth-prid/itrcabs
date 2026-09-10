@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageOpenGraph } from "@/lib/seo";
 import { Suspense } from "react";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
   description:
     "Book a premium taxi online with ITR Cabs in under two minutes. Choose your trip, pick a vehicle and send your details — no payment needed. Sedans to 26-seat coaches, all over Kerala.",
   alternates: { canonical: "/book" },
+  openGraph: pageOpenGraph("/book"),
 };
 
 export default function BookPage() {

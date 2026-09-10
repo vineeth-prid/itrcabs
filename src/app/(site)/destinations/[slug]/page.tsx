@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageOpenGraph } from "@/lib/seo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin, Clock, CalendarDays, ArrowRight, Sparkles } from "lucide-react";
@@ -30,7 +31,7 @@ export async function generateMetadata({
     title: dest.title,
     description: `${dest.description.slice(0, 150)}… Book a ${dest.name} taxi with ITR Cabs — dedicated car, expert driver, transparent pricing.`,
     alternates: { canonical: `/destinations/${dest.slug}` },
-    openGraph: { title: dest.title },
+    openGraph: pageOpenGraph(`/destinations/${dest.slug}`, { title: dest.title }),
   };
 }
 

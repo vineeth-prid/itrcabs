@@ -59,26 +59,30 @@ export function TestimonialsSection() {
             accent="riding with us."
             className="mb-0 md:mb-0"
           />
-          <Reveal delay={0.15}>
-            <a
-              href="https://g.page/itrcabs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center gap-4 rounded-2xl border border-white/15 bg-white/5 px-6 py-4 transition-colors hover:border-gold-400/50"
-            >
-              <span className="font-display text-4xl font-bold text-white">{siteConfig.googleRating.value}</span>
-              <span>
+          {siteConfig.social.googleBusinessProfile && (
+            <Reveal delay={0.15}>
+              <a
+                href={siteConfig.social.googleBusinessProfile}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-4 rounded-2xl border border-white/15 bg-white/5 px-6 py-4 transition-colors hover:border-gold-400/50"
+              >
                 <span className="flex gap-0.5">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} className="size-4 fill-gold-400 text-gold-400" aria-hidden />
                   ))}
                 </span>
-                <span className="mt-1 block text-xs text-cream/60">
-                  Google rating · {siteConfig.googleRating.count.toLocaleString("en-IN")}+ reviews
+                <span>
+                  <span className="block font-display text-lg font-bold text-white">
+                    Reviews on Google
+                  </span>
+                  <span className="mt-0.5 block text-xs text-cream/60">
+                    Read what our guests say
+                  </span>
                 </span>
-              </span>
-            </a>
-          </Reveal>
+              </a>
+            </Reveal>
+          )}
         </div>
       </div>
 

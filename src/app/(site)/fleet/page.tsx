@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { pageOpenGraph } from "@/lib/seo";
 import { categories, ONE_DAY_INCLUDED_KM, MULTI_DAY_INCLUDED_KM } from "@/config/fleet";
 import { getAvailableFleet } from "@/lib/fleet-store";
 import { PageHero } from "@/components/page-hero";
 import { VehicleCard } from "@/components/fleet/vehicle-card";
 import { Stagger, StaggerItem, Reveal } from "@/components/motion/reveal";
 import { JsonLd } from "@/components/seo/json-ld";
-import { breadcrumbSchema } from "@/lib/schema-org";
+import { breadcrumbSchema, webPageSchema } from "@/lib/schema-org";
 import { CheckCircle2, Info } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
   description:
     "Explore ITR Cabs' premium fleet in Kochi: sedans from ₹2,200/day, SUVs, Innova Crysta, Ertiga, Carens, 12–26 seat tempo travellers and Force Urbania rentals across Kerala. Transparent km-based pricing.",
   alternates: { canonical: "/fleet" },
+  openGraph: pageOpenGraph("/fleet"),
 };
 
 const pricingRules = [
@@ -29,6 +31,9 @@ export default async function FleetPage() {
   const fleet = await getAvailableFleet();
   return (
     <>
+      <JsonLd
+        schema={webPageSchema({ path: "/fleet", name: "Our fleet", type: "CollectionPage" })}
+      />
       <JsonLd schema={breadcrumbSchema([{ name: "Home", href: "/" }, { name: "Fleet", href: "/fleet" }])} />
       <PageHero
         eyebrow="The Fleet"

@@ -1,44 +1,56 @@
 import { siteConfig } from "@/config/site";
 import { faqs } from "@/config/faqs";
-import { testimonials } from "@/config/testimonials";
 
 const BASE = siteConfig.url;
 
-export function organizationSchema() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "@id": `${BASE}/#organization`,
-    name: siteConfig.name,
-    url: BASE,
-    logo: `${BASE}/logo.png`,
-    email: siteConfig.email,
-    telephone: siteConfig.phone,
-    foundingDate: siteConfig.founded,
-    sameAs: [siteConfig.social.instagram, siteConfig.social.facebook],
-    contactPoint: {
-      "@type": "ContactPoint",
-      telephone: siteConfig.phone,
-      contactType: "customer service",
-      areaServed: "IN",
-      availableLanguage: ["en", "ml", "hi"],
-    },
-  };
-}
+/**
+ * One business entity for the whole site.
+ *
+ * Everything that needs to name ITR Cabs points at these ids rather than
+ * repeating the details, so search engines resolve a single real-world
+ * business instead of several competing ones. The site previously emitted an
+ * Organization and a TaxiService describing the same company under different
+ * ids, plus a second TaxiService on the homepage carrying reviews — three
+ * entities where there should be one.
+ */
+export const BUSINESS_ID = `${BASE}/#business`;
+export const WEBSITE_ID = `${BASE}/#website`;
 
-export function localBusinessSchema() {
+/** A reference to the canonical business, for use inside other schema. */
+export const businessRef = { "@id": BUSINESS_ID };
+
+/**
+ * The canonical ITR Cabs entity.
+ *
+ * TaxiService is a subtype of LocalBusiness, so this carries the local-business
+ * properties Google looks for while stating what the business actually does.
+ *
+ * Deliberately absent: aggregateRating and review. The ratings shown on this
+ * site come from Google's own listing, and Google's structured-data policy
+ * does not allow a site to mark up third-party reviews as its own. Publishing
+ * them here risks a manual action and, more simply, would not be true.
+ */
+export function businessSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "TaxiService",
-    "@id": `${BASE}/#localbusiness`,
+    "@id": BUSINESS_ID,
     name: siteConfig.name,
-    image: `${BASE}/og.png`,
+    legalName: siteConfig.legalName,
+    description: siteConfig.description,
     url: BASE,
+    logo: `${BASE}/logo.png`,
+    image: `${BASE}/og.png`,
     telephone: siteConfig.phone,
     email: siteConfig.email,
+    foundingDate: siteConfig.founded,
     priceRange: "₹₹",
     currenciesAccepted: "INR",
     paymentAccepted: "Cash, UPI, Credit Card, Debit Card",
+    parentOrganization: {
+      "@type": "Organization",
+      name: siteConfig.parentOrganization,
+    },
     address: {
       "@type": "PostalAddress",
       streetAddress: siteConfig.address.street,
@@ -58,17 +70,59 @@ export function localBusinessSchema() {
       opens: "00:00",
       closes: "23:59",
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: siteConfig.googleRating.value,
-      reviewCount: siteConfig.googleRating.count,
-      bestRating: 5,
+    /* Only places the business actually serves. */
+    areaServed: siteConfig.serviceAreas.map((name) => ({ "@type": "Place", name })),
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: siteConfig.phone,
+      contactType: "customer service",
+      areaServed: "IN",
+      availableLanguage: ["en", "ml", "hi"],
     },
-    areaServed: [
-      "Kochi", "Ernakulam", "Kakkanad", "Munnar", "Alleppey", "Kumarakom",
-      "Thekkady", "Vagamon", "Athirappilly", "Wayanad", "Thrissur",
-      "Kozhikode", "Kannur", "Trivandrum", "Kerala",
-    ].map((name) => ({ "@type": "City", name })),
+    /* Confirmed profiles only — see siteConfig.social. */
+    sameAs: Object.entries(siteConfig.social)
+      .filter(([key, url]) => key !== "whatsappLink" && url !== "")
+      .map(([, url]) => url),
+  };
+}
+
+export function websiteSchema() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": WEBSITE_ID,
+    url: BASE,
+    name: siteConfig.name,
+    description: siteConfig.description,
+    inLanguage: "en-IN",
+    publisher: businessRef,
+    about: businessRef,
+  };
+}
+
+/**
+ * Per-page node tying the page to the site and to the business. `type` narrows
+ * it where the page has a specific role — AboutPage, ContactPage — which is
+ * what lets a crawler tell "this page is about the business" from "this page
+ * is the business's contact details".
+ */
+export function webPageSchema(opts: {
+  path: string;
+  name: string;
+  description?: string;
+  type?: "WebPage" | "AboutPage" | "ContactPage" | "CollectionPage" | "ItemPage";
+}) {
+  const url = `${BASE}${opts.path}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": opts.type ?? "WebPage",
+    "@id": `${url}#webpage`,
+    url,
+    name: opts.name,
+    ...(opts.description && { description: opts.description }),
+    isPartOf: { "@id": WEBSITE_ID },
+    about: businessRef,
+    inLanguage: "en-IN",
   };
 }
 
@@ -91,24 +145,9 @@ export function serviceSchema(opts: { name: string; description: string; slug: s
     name: opts.name,
     description: opts.description,
     url: `${BASE}/services/${opts.slug}`,
-    provider: { "@id": `${BASE}/#localbusiness` },
-    areaServed: { "@type": "State", name: "Kerala" },
+    provider: businessRef,
+    areaServed: siteConfig.serviceAreas.map((name) => ({ "@type": "Place", name })),
     serviceType: "Taxi service",
-  };
-}
-
-export function reviewSchema() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "TaxiService",
-    "@id": `${BASE}/#localbusiness`,
-    name: siteConfig.name,
-    review: testimonials.slice(0, 6).map((t) => ({
-      "@type": "Review",
-      author: { "@type": "Person", name: t.name },
-      reviewRating: { "@type": "Rating", ratingValue: t.rating, bestRating: 5 },
-      reviewBody: t.text,
-    })),
   };
 }
 

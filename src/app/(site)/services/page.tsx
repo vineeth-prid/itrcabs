@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageOpenGraph } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { services } from "@/config/services";
@@ -6,18 +7,22 @@ import { PageHero } from "@/components/page-hero";
 import { Stagger, StaggerItem } from "@/components/motion/reveal";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { JsonLd } from "@/components/seo/json-ld";
-import { breadcrumbSchema, serviceSchema } from "@/lib/schema-org";
+import { breadcrumbSchema, serviceSchema, webPageSchema } from "@/lib/schema-org";
 
 export const metadata: Metadata = {
   title: "Services — Airport Taxi, Corporate Cabs & Kerala Tours",
   description:
     "ITR Cabs services in Kochi: airport transfers, railway pickups, corporate cabs, employee transportation, wedding cars, holiday packages, pilgrimage tours, luxury rentals and outstation trips across Kerala.",
   alternates: { canonical: "/services" },
+  openGraph: pageOpenGraph("/services"),
 };
 
 export default function ServicesPage() {
   return (
     <>
+      <JsonLd
+        schema={webPageSchema({ path: "/services", name: "Our services", type: "CollectionPage" })}
+      />
       <JsonLd schema={breadcrumbSchema([{ name: "Home", href: "/" }, { name: "Services", href: "/services" }])} />
       <PageHero
         eyebrow="Services"

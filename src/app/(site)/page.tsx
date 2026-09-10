@@ -11,7 +11,8 @@ import { StatsSection } from "@/components/home/stats-section";
 import { FaqSection } from "@/components/home/faq-section";
 import { ContactSection } from "@/components/home/contact-section";
 import { JsonLd } from "@/components/seo/json-ld";
-import { faqSchema, reviewSchema } from "@/lib/schema-org";
+import { siteConfig } from "@/config/site";
+import { faqSchema, webPageSchema } from "@/lib/schema-org";
 
 /* Fleet pricing/availability is admin-editable — render fresh so edits are live */
 export const dynamic = "force-dynamic";
@@ -19,8 +20,14 @@ export const dynamic = "force-dynamic";
 export default function HomePage() {
   return (
     <>
+      <JsonLd
+        schema={webPageSchema({
+          path: "/",
+          name: "ITR Cabs — Taxi Service in Kakkanad & Kochi",
+          description: siteConfig.description,
+        })}
+      />
       <JsonLd schema={faqSchema()} />
-      <JsonLd schema={reviewSchema()} />
       <JourneyHero />
       <TrustBar />
       <WhyItr />
