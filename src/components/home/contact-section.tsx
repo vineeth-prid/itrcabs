@@ -80,7 +80,7 @@ export function ContactSection() {
           <Reveal delay={0.15} className="h-full min-h-[380px]">
             <div className="h-full overflow-hidden rounded-3xl border hairline shadow-card">
               <iframe
-                title="ITR Cabs office location — Infopark Kakkanad Road, Kochi"
+                title={`ITR Cabs office location — ${siteConfig.address.locality}, Kochi`}
                 src={`https://www.google.com/maps?q=${siteConfig.geo.lat},${siteConfig.geo.lng}&z=14&output=embed`}
                 className="h-full w-full border-0 grayscale-[35%] transition-all duration-700 hover:grayscale-0"
                 loading="lazy"

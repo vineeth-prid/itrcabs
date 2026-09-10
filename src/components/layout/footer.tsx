@@ -116,15 +116,17 @@ export function Footer() {
           <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4">
             {siteConfig.social.googleBusinessProfile ? (
               <>
-                <p className="text-xs uppercase tracking-[0.18em] text-cream/50">Find us on</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-cream/50">Google rating</p>
                 <a
                   href={siteConfig.social.googleBusinessProfile}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-1 block font-display text-2xl font-bold text-gold-300 hover:underline"
                 >
-                  Google
-                  <span className="ml-2 text-sm font-normal text-cream/60">Read our reviews</span>
+                  ★ {siteConfig.googleRating.value}
+                  <span className="ml-2 text-sm font-normal text-cream/60">
+                    {siteConfig.googleRating.count} Google reviews
+                  </span>
                 </a>
               </>
             ) : (

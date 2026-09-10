@@ -23,7 +23,7 @@ export const siteConfig = {
   whatsapp: "918089005500",
   email: "itrgrp@gmail.com",
   address: {
-    street: "Infopark Kakkanad Road",
+    street: "Jumma Masjid Building, Kuzhikattumoola Junction, Opposite BP Petrol Bunk",
     locality: "Kakkanad",
     region: "Ernakulam, Kerala",
     postalCode: "682030",
@@ -31,7 +31,14 @@ export const siteConfig = {
   },
   geo: { lat: 10.0158, lng: 76.3419 },
   hours: "Open 24 hours, 7 days a week",
-  founded: "1995",
+  /* ITR Groups' founding year, not ITR Cabs'. Kept for the company history
+     the About page tells; deliberately not published as the cab business's
+     foundingDate, which is a different and unconfirmed date. */
+  groupFounded: "1995",
+  /* Verified with the business. Shown with clear Google attribution and
+     never emitted as aggregateRating — a site may not mark up ratings
+     collected on a third-party platform as its own. */
+  googleRating: { value: 4.7, count: 87 },
   /** Places ITR Cabs genuinely serves — used for areaServed, not for keywords. */
   serviceAreas: [
     "Kakkanad",
@@ -48,11 +55,14 @@ export const siteConfig = {
        sameAs is worse than none, because it links the entity to the wrong
        account. Add Facebook / YouTube / LinkedIn here once confirmed. */
     instagram: "https://www.instagram.com/itr_cabss/",
-    /* The real Google Business Profile share link, once confirmed. Empty
-       means unverified: the site then shows no rating and links nowhere,
-       rather than pointing people at a listing that may not be ours. Filling
-       this in restores the Google links and adds it to sameAs automatically. */
-    googleBusinessProfile: "",
+    /* Supplied by the business. Note this is a Google *search* URL, not a
+       Business Profile link — it carries Chrome session parameters and
+       resolves to a results page rather than the listing itself. Good enough
+       to send a visitor to the reviews, so the visible links use it; kept out
+       of sameAs, where a search URL is not an entity and would weaken the
+       signal. Replace with the profile's own Share link to get both. */
+    googleBusinessProfile:
+      "https://www.google.com/search?q=itr+cabs&oq=itr&gs_lcrp=EgZjaHJvbWUqCAgAEEUYJxg7MggIABBFGCcYOzIGCAEQRRg5MgYIAhBFGDwyBggDEEUYPDIGCAQQRRg8MgYIBRAFGEAyBggGEEUYQTIGCAcQRRg80gEHNjIwajBqN6gCALACAA&sourceid=chrome&source=chrome.ob&ie=UTF-8",
     whatsappLink:
       "https://wa.me/918089005500?text=Hi%20ITR%20Cabs%2C%20I%27d%20like%20to%20book%20a%20cab.",
   },

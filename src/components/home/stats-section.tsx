@@ -2,10 +2,10 @@ import { CountUp } from "@/components/motion/count-up";
 import { Reveal } from "@/components/motion/reveal";
 
 const stats = [
-  { value: 30, suffix: "+", label: "Years of ITR trust", note: "Serving Kerala since 1995" },
-  { value: 120000, suffix: "+", label: "Journeys completed", note: "City runs to grand tours" },
-  { value: 60, suffix: "+", label: "Vehicles in fleet", note: "Sedan to 26-seat coach" },
-  { value: 98, suffix: "%", label: "On-time pickups", note: "Tracked across every trip" },
+  { value: 10, suffix: "+", label: "Years on the road", note: "ITR Cabs, a brand of ITR Groups" },
+  { value: 7000, suffix: "+", label: "Journeys completed", note: "City runs to grand tours" },
+  { value: 20, suffix: "", label: "Vehicles in fleet", note: "Sedan to 26-seat coach" },
+  { value: 99, suffix: "%", label: "On-time pickups", note: "Tracked across every trip" },
 ];
 
 export function StatsSection() {

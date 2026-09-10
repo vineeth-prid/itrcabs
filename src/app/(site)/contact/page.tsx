@@ -9,7 +9,7 @@ import { breadcrumbSchema, faqSchema, webPageSchema } from "@/lib/schema-org";
 export const metadata: Metadata = {
   title: "Contact — Taxi Service in Kakkanad, Ernakulam | 8089 00 55 00",
   description:
-    "Contact ITR Cabs, Kakkanad, Ernakulam. Call 8089 00 55 00 (24×7), WhatsApp us, or email itrgrp@gmail.com. Office on Infopark Kakkanad Road, Kochi, Kerala.",
+    "Contact ITR Cabs in Kakkanad, Kochi. Call 8089 00 55 00 (24×7), WhatsApp us, or email itrgrp@gmail.com for airport transfers, corporate cabs and outstation trips across Kerala.",
   alternates: { canonical: "/contact" },
   openGraph: pageOpenGraph("/contact"),
 };

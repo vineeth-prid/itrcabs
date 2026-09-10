@@ -3,7 +3,7 @@
 How ITR Cabs is described to search engines and AI crawlers, and where each
 piece is defined. **Documentation only** — nothing here is rendered.
 
-Last reviewed: 2026-09-10.
+Last reviewed: 2026-09-11.
 
 ---
 
@@ -23,8 +23,8 @@ Last reviewed: 2026-09-10.
   Instagram             Tempo traveller      Thrikkakara
   @itr_cabss            Urbania rental       Kochi
         │               Outstation trips     Ernakulam
-  Google Business       Wedding / events     Cochin Intl Airport
-  Profile (pending)     Kerala tour packages Kerala (outstation)
+  Google reviews        Wedding / events     Cochin Intl Airport
+  4.7 from 87           Kerala tour packages Kerala (outstation)
         │
   Facebook   ─┐
   YouTube     ├─ not yet confirmed; add to siteConfig.social when known
@@ -44,6 +44,7 @@ https://cabs.livingbyitr.com/#business
 | Concern | File |
 |---|---|
 | Canonical business facts | `src/config/site.ts` |
+| Per-page Open Graph | `src/lib/seo.ts` |
 | Structured data | `src/lib/schema-org.ts` |
 | Titles, descriptions, OG, Twitter | `src/app/layout.tsx` + per-page `metadata` |
 | Canonical URLs | per-page `alternates.canonical`, resolved against `metadataBase` |
@@ -85,8 +86,9 @@ TaxiService       ──parentOrganization──▶ Organization "ITR Groups"
 
 ### Deliberately absent
 
-- **`aggregateRating`** — the ratings belong to Google's listing. A site may not
-  mark up third-party ratings as its own.
+- **`aggregateRating`** — the 4.7/87 belongs to Google's listing. It is shown on
+  the site with attribution, but a site may not mark up ratings collected on a
+  third-party platform as its own, so it stays out of the schema.
 - **`Review`** — the on-site testimonials are not verified, attributable
   first-party reviews.
 - **Fake properties** — no awards, certifications, fleet counts or membership

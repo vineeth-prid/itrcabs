@@ -10,7 +10,7 @@ const proofs = [
   { icon: Star, text: "Available 24×7" },
   { icon: ShieldCheck, text: "Verified chauffeurs" },
   { icon: MapPin, text: "GPS-tracked fleet" },
-  { icon: Users, text: "30 years of service" },
+  { icon: Users, text: "10+ years on the road" },
 ];
 
 export function TrustBar() {

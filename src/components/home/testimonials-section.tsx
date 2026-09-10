@@ -74,10 +74,10 @@ export function TestimonialsSection() {
                 </span>
                 <span>
                   <span className="block font-display text-lg font-bold text-white">
-                    Reviews on Google
+                    {siteConfig.googleRating.value} on Google
                   </span>
                   <span className="mt-0.5 block text-xs text-cream/60">
-                    Read what our guests say
+                    {siteConfig.googleRating.count} Google reviews
                   </span>
                 </span>
               </a>

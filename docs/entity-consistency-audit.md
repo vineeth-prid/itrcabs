@@ -4,7 +4,7 @@ Audit of how the business identifies itself across this codebase, and where
 that conflicts with the canonical identity. **This file is documentation only.**
 It changes nothing at runtime and is not linked from the site.
 
-Last reviewed: 2026-09-10.
+Last reviewed: 2026-09-11 — business figures and address verified.
 
 ---
 
@@ -21,10 +21,11 @@ business has confirmed it.
 | Website | https://cabs.livingbyitr.com/ |
 | Phone | +91 80890 05500 |
 | Email | itrgrp@gmail.com |
-| Location | Kakkanad, Kochi, Kerala, India |
+| Address | Jumma Masjid Building, Kuzhikattumoola Junction, Opposite BP Petrol Bunk, Kakkanad, Kochi, Kerala |
 | Business type | Taxi / cab transportation service |
 | Hours | Open 24 hours, 7 days a week |
 | Instagram | https://www.instagram.com/itr_cabss/ |
+| Google reviews | 4.7 from 87 reviews (verified) |
 
 **Naming rule.** The taxi business is *ITR Cabs* everywhere. *ITR Groups* is
 the parent business and appears only where that relationship is the point —
@@ -72,15 +73,16 @@ Three separate problems:
   structured-data policy does not permit a site to mark up ratings collected
   on a third-party platform as its own.
 
-**Corrected:** the `googleRating` value is removed from the config, the
-`aggregateRating` is removed from the schema, and the three visible claims no
-longer state a rating or a review count. The layout of all three blocks is
-unchanged.
+**Corrected:** the unverified figures were pulled from the config and the
+schema. The business has since confirmed **4.7 from 87 reviews**, and the two
+dedicated blocks — the testimonials card and the footer — show that, clearly
+attributed to Google. `aggregateRating` remains absent: these are Google's
+reviews, not reviews collected on this site.
 
-**Still to do (needs the business):** confirm the real rating and review count.
-They should not be re-published as first-party structured data even then —
-Google shows its own rating in its own surfaces. The visible text can cite them
-if it attributes them to Google.
+The hero badge and trust bar were **not** returned to stating a rating. They
+now carry facts that do not need a source ("Chauffeur-driven across Kerala ·
+Available 24×7", "Available 24×7"), which keeps the rating in the two places
+built for it rather than repeated four times.
 
 ### 3. Unverified Google Business Profile link
 
@@ -88,13 +90,15 @@ The testimonials section linked to `https://g.page/itrcabs`, a vanity short
 link that could not be confirmed as this business's listing, and the footer
 implied the same listing.
 
-**Corrected:** both are now driven by `siteConfig.social.googleBusinessProfile`,
-which is deliberately empty. While empty, the site shows no Google rating and
-links nowhere. Paste the genuine profile URL there and the Google link returns
-in both places and is added to `sameAs` automatically.
+**Corrected:** both are driven by `siteConfig.social.googleBusinessProfile`,
+now populated with the URL the business supplied.
 
-> Use the share URL from the Google Business Profile dashboard. Do **not** use
-> a Google search or Maps *search-result* URL.
+> **That URL is a Google *search* link, not a Business Profile link.** It is
+> `google.com/search?q=itr+cabs&…` with Chrome session parameters attached. It
+> works for sending a visitor to the reviews, so the visible links use it
+> unchanged — but it is excluded from `sameAs`, where a results page is not an
+> entity. Replacing it with the profile's own **Share** link would put it in
+> both places. See "Three things to keep an eye on" below.
 
 ### 4. Invented social profiles
 
@@ -145,24 +149,64 @@ animates it identically. No visual change.
 
 ---
 
-## Unverified claims still published — business to confirm
+## Business figures — verified
 
-These are pre-existing, owner-supplied figures. They have been left in place
-because removing a business's own claims about itself is the owner's call, not
-an automated one. **None of them could be verified from anything in this
-project.** Each should be confirmed or removed.
+Supplied and confirmed by the business on 2026-09-11. Every visible statistic
+is one of these, and each label states exactly what it counts.
 
-| Claim | Where | Status |
+| Figure | Value | Shown on |
 |---|---|---|
-| "30+ years of ITR trust", "Serving Kerala since 1995" | Homepage stats, About timeline | Corroborated *within the project* (`founded: 1995`, about-page history). Not independently verified. |
-| "120,000+ journeys completed" | Homepage stats | Unverified |
-| "60+ vehicles in fleet" | Homepage stats | Unverified. Note the fleet config lists **12 vehicle classes**, not 60 vehicles — these measure different things, which is easy to misread. |
-| "98% on-time pickups" | Homepage stats | Unverified — no tracking source in the project |
-| Street address "Infopark Kakkanad Road", postcode 682030 | `siteConfig.address`, `PostalAddress` schema | Locality/region/postcode are consistent with Kakkanad. The **street line** could not be confirmed. If ITR Cabs has no customer-facing office at a street address, this should become a service-area business without a street line. |
-| Geo coordinates 10.0158, 76.3419 | `siteConfig.geo` | Plausible for Kakkanad; not confirmed against the real premises |
+| Google rating | 4.7 | Testimonials card, footer — attributed to Google |
+| Google reviews | 87 | Testimonials card, footer |
+| Journeys completed | 7,000+ | Homepage stats |
+| Fleet size | 20 vehicles | Homepage stats |
+| Years on the road | 10+ | Homepage stats, trust bar |
+| On-time pickups | 99% | Homepage stats |
 
-Say the word on any row and it is removed in one edit — each is a single value
-in `src/config/site.ts` or `stats-section.tsx`.
+These replaced the earlier unverified set: 4.9 with 1,280+ reviews, 120,000+
+journeys, 60+ vehicles, 30 years, 98% on-time.
+
+The rating and review count are **displayed** with clear Google attribution but
+are still **not** emitted as `aggregateRating`. They are Google's data about the
+business, not reviews collected on this site, and Google's structured-data
+policy does not allow a site to mark up third-party reviews as its own.
+
+### Three things to keep an eye on
+
+**1. "10+ years" versus "since 1995".** The verified figure for ITR Cabs is 10+
+years, but several places still describe ITR as beginning in 1995. They read
+naturally as **ITR Groups**, the parent business, and were left alone on that
+basis. If any is meant to describe *ITR Cabs*, it contradicts the verified
+figure and should be reworded.
+
+| Location | Wording |
+|---|---|
+| `app/(site)/about/page.tsx` | "ITR began in 1995…", "Three decades later…" |
+| `components/about/about-timeline.tsx` | Timeline opening at 1995 |
+| `components/home/why-itr.tsx` | "the ITR way since 1995" |
+| `components/layout/footer.tsx` | "three decades of trust" |
+
+`foundingDate` is no longer published in structured data: 1995 is ITR Groups'
+year, and ITR Cabs' own founding year has not been confirmed.
+
+**2. Postal code, locality and map pin.** The street line is now the verified
+address, but PIN **682030** and locality **Kakkanad** carried over from the
+previous configuration and were not restated. Confirm that Kuzhikattumoola
+Junction falls within Kakkanad and that PIN. The contact-page map embed uses
+coordinates 10.0158, 76.3419, also not re-verified — worth checking the pin
+lands on the right building.
+
+**3. The Google URL is a search link, not a profile.** The URL supplied is a
+Chrome `google.com/search?q=itr+cabs&…` results page carrying browser session
+parameters (`gs_lcrp`, `sourceid=chrome`, `source=chrome.ob`). It works for
+sending a visitor to the reviews, so the visible links use it unchanged. It is
+deliberately **excluded from `sameAs`**: that property is for pages which
+*represent* the business, and a results page is not one — publishing it as an
+identity claim would weaken the entity rather than strengthen it.
+
+To get both, open the Google Business Profile → **Share** → copy that link
+(it looks like `g.page/…`, `maps.app.goo.gl/…` or `share.google/…`) into
+`siteConfig.social.googleBusinessProfile`. It will join `sameAs` automatically.
 
 ---
 
@@ -176,7 +220,7 @@ contacted or modified** — this section is a to-do list for manual work.
 | Profile | URL in project | Status |
 |---|---|---|
 | Instagram | https://www.instagram.com/itr_cabss/ | Confirmed, in use |
-| Google Business Profile | *(was `g.page/itrcabs`)* | Removed as unverified; awaiting the real URL |
+| Google Business Profile | `google.com/search?q=itr+cabs&…` | Supplied by the business. A search URL, not a profile link — used for the visible links, excluded from `sameAs`. Replace with the profile Share link. |
 | Facebook | *(was `facebook.com/itrcabs`)* | Removed as unverified |
 
 No Justdial, Quickerala, SafarCabby, Sulekha or IndiaMART links exist anywhere

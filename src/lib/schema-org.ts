@@ -20,6 +20,17 @@ export const WEBSITE_ID = `${BASE}/#website`;
 export const businessRef = { "@id": BUSINESS_ID };
 
 /**
+ * A search-results page, not a profile.
+ *
+ * `sameAs` is meant to list pages that *represent* the business — its Google
+ * Business Profile, its Instagram. A `google.com/search?q=...` link resolves
+ * to a results page that happens to mention it, and carries whatever session
+ * parameters the browser added. Publishing one as an identity claim weakens
+ * the entity rather than strengthening it, so these are filtered out.
+ */
+const isSearchUrl = (url: string) => /google\.[a-z.]+\/search/.test(url);
+
+/**
  * The canonical ITR Cabs entity.
  *
  * TaxiService is a subtype of LocalBusiness, so this carries the local-business
@@ -43,7 +54,6 @@ export function businessSchema() {
     image: `${BASE}/og.png`,
     telephone: siteConfig.phone,
     email: siteConfig.email,
-    foundingDate: siteConfig.founded,
     priceRange: "₹₹",
     currenciesAccepted: "INR",
     paymentAccepted: "Cash, UPI, Credit Card, Debit Card",
@@ -79,9 +89,14 @@ export function businessSchema() {
       areaServed: "IN",
       availableLanguage: ["en", "ml", "hi"],
     },
-    /* Confirmed profiles only — see siteConfig.social. */
+    /* Confirmed profiles only. A Google *search* URL is excluded: sameAs is
+       for pages that represent the business, and a results page is not one.
+       A real Business Profile share link would belong here. */
     sameAs: Object.entries(siteConfig.social)
-      .filter(([key, url]) => key !== "whatsappLink" && url !== "")
+      .filter(
+        ([key, url]) =>
+          key !== "whatsappLink" && url.length > 0 && !isSearchUrl(url)
+      )
       .map(([, url]) => url),
   };
 }
